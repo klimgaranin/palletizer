@@ -163,6 +163,7 @@
   .chip.insertBefore { box-shadow: inset 3px 0 0 var(--accent); }
   .chip.insertAfter { box-shadow: inset -3px 0 0 var(--accent); }
   .editorPreview { width: 100%; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  .editorPreview.previewStale { opacity: 0.55; filter: grayscale(45%); }
 
   .appFooter { text-align: center; color: var(--muted); font-size: 12px; font-weight: 600; margin-top: 32px; }
 
@@ -287,7 +288,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.2.0</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.2.1</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -1892,6 +1893,24 @@ PZE.deserializeDoc = function (json) {
     lookupMap: null,
   };
   let editorDoc = null;
+  // Кэш превью по индексу паллеты — рендер одной карточки (2 ракурса + вид сверху +
+  // профиль) не бесплатный, а раньше редактор перерисовывал ВСЕ паллеты на каждое
+  // действие (в том числе на каждое перетаскивание), из-за чего при десятках паллет
+  // любое изменение подвисало на пару секунд. Теперь пересчитывается только та паллета,
+  // чья подпись (состав шеренг + актуальные габариты её строк) реально изменилась.
+  let previewCache = {};
+  function palletSignature(doc, pi) {
+    const p = doc.pallets[pi];
+    const rowsPart = p.lanes.flat().map((id) => {
+      const r = doc.rows[id];
+      return r ? [id, r.qty, r.lengthCm, r.widthCm, r.heightCm, r.weightPerBoxKg].join(':') : id;
+    }).join('|');
+    return JSON.stringify({
+      lanes: p.lanes, rowsPart, autoSort: doc.autoSort,
+      len: state.config.pallet.lengthMm, wid: state.config.pallet.widthMm,
+      order: state.shipment.orderNumber, date: state.shipment.shipmentDate,
+    });
+  }
 
   const $ = (sel) => document.querySelector(sel);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -2092,6 +2111,23 @@ PZE.deserializeDoc = function (json) {
     return dest.where === 'pool' ? 'Пул (не распределено)' : `Паллета ${dest.pi + 1} · Шеренга ${dest.li + 1}`;
   }
 
+  // Список направлений («Пул»/«Паллета N · Шеренга L») и шаблон <select> с готовыми
+  // <option> одинаковы для ВСЕХ чипов в один проход рендера — считаем и строим один раз
+  // за renderEditor(), а не заново на каждую карточку (при десятках паллет и чипов это
+  // была отдельная существенная доля тормозов при любом действии в редакторе).
+  let destSelectTemplate = null;
+  function rebuildDestSelectTemplate(doc) {
+    const dests = allDestinations(doc);
+    const tpl = document.createElement('select');
+    dests.forEach((dest) => {
+      const opt = document.createElement('option');
+      opt.textContent = destLabel(dest);
+      opt.value = JSON.stringify(dest);
+      tpl.appendChild(opt);
+    });
+    destSelectTemplate = tpl;
+  }
+
   function chipEl(doc, id) {
     const row = doc.rows[id];
     const chip = el('div', 'chip');
@@ -2129,17 +2165,13 @@ PZE.deserializeDoc = function (json) {
 
     const actions = el('div', 'chipActions');
 
-    const moveSelect = document.createElement('select');
+    const moveSelect = destSelectTemplate.cloneNode(true);
     moveSelect.className = 'chipMove';
     const loc = PZE.locate(doc, id);
-    allDestinations(doc).forEach((dest) => {
-      const opt = document.createElement('option');
-      opt.textContent = destLabel(dest);
-      opt.value = JSON.stringify(dest);
-      if (loc && ((loc.where === 'pool' && dest.where === 'pool') ||
-        (loc.where === 'lane' && dest.where === 'lane' && loc.pi === dest.pi && loc.li === dest.li))) opt.selected = true;
-      moveSelect.appendChild(opt);
-    });
+    if (loc) {
+      const wanted = loc.where === 'pool' ? '{"where":"pool"}' : JSON.stringify({ where: 'lane', pi: loc.pi, li: loc.li });
+      moveSelect.value = wanted;
+    }
     moveSelect.addEventListener('change', () => { PZE.moveTo(doc, id, JSON.parse(moveSelect.value)); onDocChanged(); });
     actions.appendChild(moveSelect);
 
@@ -2240,6 +2272,7 @@ PZE.deserializeDoc = function (json) {
     if (doc.autoSort === undefined) doc.autoSort = true;
     $('#autoSortToggle').checked = doc.autoSort;
     $('#autoSortLabel').textContent = 'Порядок в шеренге: ' + (doc.autoSort ? 'авто' : 'вручную');
+    rebuildDestSelectTemplate(doc);
 
     const poolChips = $('#poolChips');
     poolChips.innerHTML = '';
@@ -2265,7 +2298,7 @@ PZE.deserializeDoc = function (json) {
       head.appendChild(el('b', null, `Паллета ${pi + 1}`));
       const removeBtn = el('button', 'smallBtn', 'Удалить паллету'); removeBtn.type = 'button';
       removeBtn.addEventListener('click', () => {
-        if (confirm('Удалить паллету? Короба вернутся в пул «не распределено».')) { PZE.removePallet(doc, pi); onDocChanged(); }
+        if (confirm('Удалить паллету? Короба вернутся в пул «не распределено».')) { PZE.removePallet(doc, pi); previewCache = {}; onDocChanged(); }
       });
       head.appendChild(removeBtn);
       box.appendChild(head);
@@ -2290,17 +2323,35 @@ PZE.deserializeDoc = function (json) {
       });
       box.appendChild(lanes);
 
-      try {
-        const pallet = palletsForRender[pi];
-        const scene = PZ.buildScene(pallet, state.config, `Паллета ${pi + 1}`, { manualOrder: !doc.autoSort });
-        const canvas = PZR.composePallet(pallet, scene, state.shipment);
-        const img = document.createElement('img');
-        img.className = 'editorPreview';
-        img.src = canvas.toDataURL('image/png');
-        img.alt = `Превью паллеты ${pi + 1}`;
-        box.appendChild(img);
-      } catch (e) {
-        box.appendChild(el('div', 'errorBox', 'Не удалось отрисовать превью: ' + e.message));
+      const sig = palletSignature(doc, pi);
+      const cached = previewCache[pi];
+      const img = document.createElement('img');
+      img.className = 'editorPreview';
+      img.alt = `Превью паллеты ${pi + 1}`;
+      if (cached) img.src = cached.dataUrl;
+      box.appendChild(img);
+
+      if (cached && cached.sig === sig) {
+        // Уже посчитано на прошлый рендер и с тех пор не менялось — просто показываем.
+      } else {
+        // Пересчёт (~200 мс на паллету) откладываем на следующий тик, чтобы браузер
+        // успел отрисовать уже готовый DOM (перенесённую карточку, подсветку и т.д.)
+        // ДО тяжёлой работы — иначе именно это и ощущается как «подвисание» при
+        // перетаскивании. Пока считается — показываем предыдущий кадр приглушённым.
+        if (cached) img.classList.add('previewStale');
+        setTimeout(() => {
+          try {
+            const pallet = palletsForRender[pi];
+            const scene = PZ.buildScene(pallet, state.config, `Паллета ${pi + 1}`, { manualOrder: !doc.autoSort });
+            const canvas = PZR.composePallet(pallet, scene, state.shipment);
+            const dataUrl = canvas.toDataURL('image/png');
+            previewCache[pi] = { sig, dataUrl };
+            img.src = dataUrl;
+            img.classList.remove('previewStale');
+          } catch (e) {
+            img.replaceWith(el('div', 'errorBox', 'Не удалось отрисовать превью: ' + e.message));
+          }
+        }, 0);
       }
 
       palletsContainer.appendChild(box);
@@ -2321,6 +2372,7 @@ PZE.deserializeDoc = function (json) {
     const { rows, missing } = PZ.mergeOrderWithLookup(orderLines, lookup);
     if (rows.length === 0) throw new Error('Ни один артикул из заказа не найден в справочнике — нечего раскладывать.');
     editorDoc = PZE.createDoc(rows);
+    previewCache = {};
     showEditor();
     const missingBox = $('#missingArticlesBox');
     if (missing.length) {
@@ -2332,7 +2384,7 @@ PZE.deserializeDoc = function (json) {
     onDocChanged();
   }
 
-  $('#addPalletBtn').addEventListener('click', () => { PZE.addPallet(editorDoc); onDocChanged(); });
+  $('#addPalletBtn').addEventListener('click', () => { PZE.addPallet(editorDoc); previewCache = {}; onDocChanged(); });
 
   const autoSortToggle = $('#autoSortToggle');
   const autoSortLabel = $('#autoSortLabel');
@@ -2468,6 +2520,7 @@ PZE.deserializeDoc = function (json) {
   const restored = loadDraft();
   if (restored) {
     editorDoc = restored;
+    previewCache = {};
     showEditor();
     renderEditor();
   }
