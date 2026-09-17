@@ -34,6 +34,7 @@
     font-weight: 500;
   }
   button, input { font-family: inherit; }
+  button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
   .topBar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .titleBlock { min-width: 240px; }
@@ -87,6 +88,7 @@
   }
   .field { display: flex; flex-direction: column; gap: 4px; }
   .field label { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .fieldHint { font-size: 11px; color: var(--muted); font-weight: 500; line-height: 1.4; }
   .field input {
     font-weight: 500; font-size: 14px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
     background: var(--input-bg); color: var(--text);
@@ -163,8 +165,8 @@
       <p class="subtitle">Загрузите Excel-файл раскладки — приложение построит карточки паллет с видами и ракурсами. Работает полностью локально, в браузере.</p>
     </div>
     <div class="topActions">
-      <button class="circleBtn" id="helpBtn" title="Справка" aria-label="Справка">?</button>
-      <button class="themeSwitch" id="themeToggle" title="Переключить тему" aria-label="Переключить тему" aria-pressed="false">
+      <button type="button" class="circleBtn" id="helpBtn" title="Справка" aria-label="Справка">?</button>
+      <button type="button" class="themeSwitch" id="themeToggle" title="Переключить тему" aria-label="Переключить тему" aria-pressed="false">
         <span class="themeIcon" aria-hidden="true">☀</span>
         <span class="themeThumb"></span>
         <span class="themeIcon" aria-hidden="true">☾</span>
@@ -181,15 +183,19 @@
   <div class="errorBox" id="errorBox" hidden></div>
 
   <div class="settingsBar">
-    <button class="ghostBtn" id="settingsToggle">Настройки раскладки и отгрузки</button>
+    <button type="button" class="ghostBtn" id="settingsToggle">Настройки раскладки и отгрузки</button>
   </div>
 
   <div class="settingsPanel" id="settingsPanel" hidden>
     <div class="field"><label>Длина паллеты, мм</label><input type="number" id="cfgLength" value="1200" step="10" /></div>
     <div class="field"><label>Ширина паллеты, мм</label><input type="number" id="cfgWidth" value="800" step="10" /></div>
-    <div class="field"><label>Блоков на паллету</label><input type="number" id="cfgBlocksPerPallet" value="2" min="1" step="1" /></div>
+    <div class="field">
+      <label>Блоков на паллету</label>
+      <input type="number" id="cfgBlocksPerPallet" value="2" min="1" step="1" />
+      <span class="fieldHint">Сколько блоков артикулов из Excel (групп между пустыми строками) объединяются в одну паллету. По умолчанию 2 — каждая паллета из двух шеренг друг напротив друга.</span>
+    </div>
     <div class="field"><label>Заказ №</label><input type="text" id="shipOrderNumber" placeholder="напр. 4521" /></div>
-    <div class="field"><label>Дата отгрузки</label><input type="text" id="shipDate" placeholder="напр. 20.09.2026" /></div>
+    <div class="field"><label>Дата отгрузки</label><input type="date" id="shipDate" /></div>
   </div>
 
   <div id="emptyState" class="emptyState">Карточки паллет появятся здесь после загрузки файла.</div>
@@ -197,18 +203,18 @@
   <div id="resultsSection" hidden>
     <div class="resultsHeader">
       <div class="summaryLine" id="summaryLine"></div>
-      <button class="primaryBtn" id="exportPdfBtn">Скачать PDF (все паллеты, A4)</button>
+      <button type="button" class="primaryBtn" id="exportPdfBtn">Скачать PDF (все паллеты, A4)</button>
     </div>
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.0.0</span> · <button class="linkBtn" id="changelogBtn">история версий</button></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.0.1</span> · <button type="button" class="linkBtn" id="changelogBtn">история версий</button></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
   <div class="lightboxTop">
     <h2 id="lightboxTitle"></h2>
-    <button class="lightboxClose" id="lightboxClose">Закрыть ✕</button>
+    <button type="button" class="lightboxClose" id="lightboxClose">Закрыть ✕</button>
   </div>
   <img id="lightboxImg" alt="" />
 </div>
@@ -217,7 +223,7 @@
   <div class="modalBox">
     <div class="modalHeader">
       <h2>Как пользоваться</h2>
-      <button class="modalClose" id="helpClose">Закрыть ✕</button>
+      <button type="button" class="modalClose" id="helpClose">Закрыть ✕</button>
     </div>
     <div class="modalBody">
       <h3>Загрузка</h3>
@@ -250,6 +256,7 @@
 
       <h3 id="changelogSection">История версий</h3>
       <ul>
+        <li><b>v1.0.1</b> — дата отгрузки теперь через календарь, подсказка к полю «Блоков на паллету», укрепление кнопок под тач на телефонах.</li>
         <li><b>v1.0.0</b> — первый публичный релиз: перенос раскладки/рендера в браузер (без установки), тёмная/светлая тема, справка, экспорт в PDF/PNG.</li>
       </ul>
     </div>
@@ -1556,6 +1563,11 @@ function drawComposition(ctx, r, scene) {
 
   const $ = (sel) => document.querySelector(sel);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const formatDateRu = (isoDate) => {
+    if (!isoDate) return '';
+    const [y, m, d] = isoDate.split('-');
+    return (y && m && d) ? `${d}.${m}.${y}` : isoDate;
+  };
 
   const dropzone = $('#dropzone');
   const fileInput = $('#fileInput');
@@ -1584,7 +1596,7 @@ function drawComposition(ctx, r, scene) {
     state.config.pallet.widthMm = Math.max(100, parseInt(inWidth.value, 10) || 800);
     state.config.blocksPerPallet = Math.max(1, parseInt(inBlocksPerPallet.value, 10) || 2);
     state.shipment.orderNumber = inOrderNumber.value.trim();
-    state.shipment.shipmentDate = inShipDate.value.trim();
+    state.shipment.shipmentDate = formatDateRu(inShipDate.value);
   }
 
   function rebuildAndRender() {
