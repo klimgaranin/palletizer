@@ -115,6 +115,43 @@
 
   .emptyState { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; font-weight: 600; }
 
+  .editorPool {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px;
+  }
+  .editorPoolTitle { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+  .chipRow { display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px; }
+  .chipRow.dragOver { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 8px; }
+
+  .chip {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    display: flex; flex-direction: column; gap: 6px; width: 190px; cursor: grab;
+  }
+  .chip.dragging { opacity: 0.4; }
+  .chipTitle { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; gap: 6px; }
+  .chipTitle .chipQty { color: var(--muted); font-weight: 600; }
+  .chipDims { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; flex-wrap: wrap; }
+  .chipDims input {
+    width: 40px; font-size: 11px; font-weight: 700; padding: 2px 3px; border: 1px solid var(--border);
+    border-radius: 4px; background: var(--input-bg); color: var(--text); text-align: center;
+  }
+  .chipQtyInput { width: 44px !important; }
+  .chipActions { display: flex; gap: 4px; flex-wrap: wrap; }
+  .chipBtn {
+    border: 1px solid var(--border); background: var(--card-bg); color: var(--text); border-radius: 6px;
+    padding: 3px 6px; font-size: 11px; font-weight: 700; cursor: pointer;
+  }
+  .chipBtn:hover { background: var(--hover); }
+  .chipMove { font-size: 11px; font-weight: 600; padding: 3px 4px; border-radius: 6px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); width: 100%; }
+
+  .editorPallet { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  .editorPalletHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .editorPalletHead b { font-size: 14px; }
+  .editorLanes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  @media (max-width: 620px) { .editorLanes { grid-template-columns: 1fr; } }
+  .editorLane { background: var(--bg); border: 1px dashed var(--border); border-radius: 8px; padding: 10px; min-height: 80px; }
+  .laneLabel { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+  .editorPreview { width: 100%; border-radius: 8px; border: 1px solid var(--border); display: block; }
+
   .appFooter { text-align: center; color: var(--muted); font-size: 12px; font-weight: 600; margin-top: 32px; }
 
   .lightbox, .modalOverlay {
@@ -194,19 +231,47 @@
     </div>
     <div class="field"><label>Заказ №</label><input type="text" id="shipOrderNumber" placeholder="напр. 4521" /></div>
     <div class="field"><label>Дата отгрузки</label><input type="date" id="shipDate" /></div>
+    <div class="field" style="grid-column: 1 / -1;">
+      <label>Справочник габаритов (Google Таблица)</label>
+      <input type="text" id="cfgLookupUrl" placeholder="ссылка на экспорт TSV" value="https://docs.google.com/spreadsheets/d/1HP2d7rZE9aT7J2nz-Y-uaOMsvx-TZgq6U5mQ_ktT4YE/export?format=tsv&amp;gid=1457442887&amp;range=A1:AA1500" />
+      <span class="fieldHint">Ссылка вида «.../export?format=tsv&amp;gid=...&amp;range=...» — та же таблица, из которой сейчас тянутся габариты в Excel. Таблица должна быть открыта «по ссылке — читатель». Работает только при открытии приложения по ссылке (не при запуске локального файла двойным кликом) — это ограничение браузера.</span>
+    </div>
   </div>
 
   <div id="emptyState" class="emptyState">Карточки паллет появятся здесь после загрузки файла.</div>
 
+  <div id="editorSection" hidden>
+    <div class="resultsHeader">
+      <div class="summaryLine" id="editorSummary"></div>
+      <div class="topActions">
+        <button type="button" class="ghostBtn" id="addPalletBtn">+ Паллета</button>
+        <button type="button" class="ghostBtn" id="refreshLookupBtn">Обновить справочник</button>
+        <button type="button" class="ghostBtn" id="clearDraftBtn">Начать заново</button>
+        <button type="button" class="primaryBtn" id="finishEditingBtn">Готово → карточки</button>
+      </div>
+    </div>
+    <div class="errorBox" id="missingArticlesBox" hidden></div>
+
+    <div class="editorPool">
+      <div class="editorPoolTitle">Не распределено</div>
+      <div class="chipRow" id="poolChips"></div>
+    </div>
+
+    <div id="editorPallets"></div>
+  </div>
+
   <div id="resultsSection" hidden>
     <div class="resultsHeader">
       <div class="summaryLine" id="summaryLine"></div>
-      <button type="button" class="primaryBtn" id="exportPdfBtn">Скачать PDF (все паллеты, A4)</button>
+      <div class="topActions">
+        <button type="button" class="ghostBtn" id="backToEditorBtn" hidden>← К редактору</button>
+        <button type="button" class="primaryBtn" id="exportPdfBtn">Скачать PDF (все паллеты, A4)</button>
+      </div>
     </div>
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.0.2</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.1.0</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -243,7 +308,19 @@
       </ul>
 
       <h3>Если короб не помещается</h3>
-      <p>Если по данным короб получается шире половины ширины паллеты или шеренга выходит за габарит — это сигнал поправить сами данные в Excel (например, поменять местами «Длина» и «Ширина» для этого артикула), а не поведение, которое нужно чинить в приложении.</p>
+      <p>Если по данным короб получается шире половины ширины паллеты или шеренга выходит за габарит — это сигнал поправить сами данные (например, кнопкой «⇄ Д/В» поменять местами длину и высоту для этого артикула — так это делается вручную), а не поведение, которое нужно чинить в приложении.</p>
+
+      <h3>Заказ вместо готовой раскладки — редактор</h3>
+      <p>Если в файле есть только «Артикул» и количество («Поставлю»/«Заказано»), но нет длины/ширины/высоты — приложение считает это заказом, а не готовой раскладкой, и открывает редактор:</p>
+      <ul>
+        <li>Габариты и вес подтягиваются по артикулу из таблицы-справочника (ссылка настраивается в «Справочник габаритов»). Количество из заказа делится на «Кол-во, шт OUTER» из справочника, чтобы получить число коробов.</li>
+        <li>Каждый артикул — карточка-«чип»: перетащите её мышью в нужную шеренгу нужной паллеты, или выберите пункт назначения в выпадающем списке на самой карточке.</li>
+        <li><b>✂ Разделить</b> — отделить часть количества в отдельный столбик (например, часть коробов на одну паллету, часть на другую).</li>
+        <li><b>⇄ Д/В</b> — поменять местами длину и высоту короба, если так он лучше ложится.</li>
+        <li>Габариты, вес и количество на карточке можно просто вписать вручную поверх подтянутых из справочника.</li>
+        <li>Черновик автоматически сохраняется в этом браузере — обновление страницы работу не сотрёт. «Начать заново» стирает черновик безвозвратно.</li>
+        <li>«Готово → карточки» строит финальные карточки паллет из текущей раскладки — дальше с ними можно работать как обычно (PDF/PNG).</li>
+      </ul>
 
       <h3>Экспорт и печать</h3>
       <ul>
@@ -683,12 +760,20 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 const PZ = {};
 
 // ---------- Модель / конфиг ----------
+let _pzNextId = 1;
 PZ.makeArticle = (a) => ({
+  id: a.id || 'r' + (_pzNextId++),
   article: a.article, qty: a.qty, lengthCm: a.lengthCm, widthCm: a.widthCm,
   heightCm: a.heightCm, weightPerBoxKg: a.weightPerBoxKg,
   get stackHeightCm() { return this.heightCm * this.qty; },
   get stackWeightKg() { return this.weightPerBoxKg * this.qty; },
 });
+// Гарантирует, что новые id (генерируемые при разбиении строк) не столкнутся с id,
+// восстановленными из сохранённого черновика (localStorage/JSON-импорт).
+PZ.bumpIdCounter = function (fromId) {
+  const m = /^r(\d+)$/.exec(fromId || '');
+  if (m) _pzNextId = Math.max(_pzNextId, parseInt(m[1], 10) + 1);
+};
 
 PZ.defaultConfig = () => ({
   blocksPerPallet: 2,
@@ -766,6 +851,115 @@ PZ.parseBlocks = function (sheetRows) {
 
   if (blocks.length === 0) throw new Error('Не найдено ни одного блока артикулов (проверьте, что таблица не пустая).');
   return blocks;
+};
+
+// Определяет формат файла: готовая раскладка (есть колонки габаритов) или голый
+// заказ (только артикул+количество, без длины/ширины/высоты).
+PZ.looksLikeLayout = function (sheetRows) {
+  const header = (sheetRows && sheetRows[0]) || [];
+  const norm = (v) => (v === undefined || v === null ? '' : String(v).trim().toLowerCase());
+  const has = (pred) => header.some((h) => { const n = norm(h); return n && pred(n); });
+  return has((h) => h.includes('артикул')) && has((h) => h.includes('длина')) &&
+    has((h) => h.includes('ширина')) && has((h) => h.includes('высота') && !h.includes('столб') && !h.includes('стопк'));
+};
+PZ.looksLikeOrder = function (sheetRows) {
+  const header = (sheetRows && sheetRows[0]) || [];
+  const norm = (v) => (v === undefined || v === null ? '' : String(v).trim().toLowerCase());
+  const has = (pred) => header.some((h) => { const n = norm(h); return n && pred(n); });
+  return has((h) => h.includes('артикул')) && (has((h) => h.includes('поставлю')) || has((h) => h.includes('заказано')));
+};
+
+// ---------- Заказ (перенос вручную: только Артикул + Кол-во, без габаритов —
+// габариты дотягиваются из справочника Google Sheets) ----------
+PZ.parseOrder = function (sheetRows) {
+  if (!sheetRows || sheetRows.length === 0) throw new Error('Лист пустой — нет данных для разбора.');
+  const header = sheetRows[0] || [];
+  const norm = (v) => (v === undefined || v === null ? '' : String(v).trim().toLowerCase());
+  const findCol = (pred) => {
+    for (let c = 0; c < header.length; c++) { const h = norm(header[c]); if (h && pred(h)) return c; }
+    return -1;
+  };
+
+  const colArticle = findCol((h) => h.includes('артикул'));
+  if (colArticle < 0) throw new Error("Не найдена колонка 'Артикул' в заказе.");
+  const colSupply = findCol((h) => h.includes('поставлю'));
+  const colOrdered = findCol((h) => h.includes('заказано'));
+  if (colSupply < 0 && colOrdered < 0) throw new Error("Не найдена колонка количества ('Поставлю' или 'Заказано') в заказе.");
+
+  const isEmptyCell = (v) => v === undefined || v === null || String(v).trim() === '';
+  const lines = [];
+  for (let r = 1; r < sheetRows.length; r++) {
+    const row = sheetRows[r] || [];
+    const article = isEmptyCell(row[colArticle]) ? '' : String(row[colArticle]).trim();
+    if (!article) continue;
+    let qtyRaw = colSupply >= 0 ? row[colSupply] : undefined;
+    if (isEmptyCell(qtyRaw) && colOrdered >= 0) qtyRaw = row[colOrdered];
+    if (isEmptyCell(qtyRaw)) continue;
+    const qty = Math.round(typeof qtyRaw === 'number' ? qtyRaw : parseFloat(String(qtyRaw).replace(',', '.')));
+    if (!qty || qty <= 0) continue;
+    lines.push({ article, qty });
+  }
+  if (lines.length === 0) throw new Error('В заказе не найдено ни одной строки с артикулом и количеством.');
+  return lines;
+};
+
+// ---------- Справочник габаритов (Google Sheets, экспорт в TSV) ----------
+PZ.parseLookupTsv = function (tsvText) {
+  const rows = tsvText.replace(/\r/g, '').split('\n').filter((l) => l.length > 0).map((line) => line.split('\t'));
+  if (rows.length === 0) throw new Error('Справочник пуст.');
+  const header = rows[0];
+  const norm = (v) => (v === undefined || v === null ? '' : String(v).trim().toLowerCase());
+  const findCol = (pred) => {
+    for (let c = 0; c < header.length; c++) { const h = norm(header[c]); if (h && pred(h)) return c; }
+    return -1;
+  };
+
+  const colArticle = findCol((h) => h.includes('артикул') && h.includes('гр'));
+  const colArticleFallback = findCol((h) => h.includes('артикул'));
+  const colLength = findCol((h) => h.includes('длина') && h.includes('outer'));
+  const colWidth = findCol((h) => h.includes('ширина') && h.includes('outer'));
+  const colHeight = findCol((h) => h.includes('высота') && h.includes('outer'));
+  const colWeight = findCol((h) => h.includes('вес') && h.includes('outer'));
+  const colUnitsPerBox = findCol((h) => h.includes('кол-во') && h.includes('outer'));
+
+  const colArt = colArticle >= 0 ? colArticle : colArticleFallback;
+  if (colArt < 0) throw new Error("В справочнике не найдена колонка 'Артикул'.");
+  if (colLength < 0 || colWidth < 0 || colHeight < 0 || colWeight < 0)
+    throw new Error('В справочнике не найдены колонки габаритов OUTER (длина/ширина/высота/вес).');
+
+  const num = (v) => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
+  const map = new Map();
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const code = (row[colArt] || '').trim();
+    if (!code) continue;
+    const l = num(row[colLength]), w = num(row[colWidth]), h = num(row[colHeight]), wt = num(row[colWeight]);
+    if (l == null || w == null || h == null || wt == null) continue;
+    const unitsPerBox = colUnitsPerBox >= 0 ? (num(row[colUnitsPerBox]) || 1) : 1;
+    map.set(code, { lengthCm: l, widthCm: w, heightCm: h, weightPerBoxKg: wt, unitsPerBox });
+  }
+  if (map.size === 0) throw new Error('Не удалось разобрать ни одной строки справочника.');
+  return map;
+};
+
+// Сшивает строки заказа (артикул + количество ЕДИНИЦ товара, напр. метров каната)
+// со справочником габаритов. Заказанное количество делится на "Кол-во, шт OUTER"
+// (сколько единиц товара помещается в один короб), чтобы получить число коробов —
+// именно так эти цифры считаются вручную сейчас. Возвращает {rows, missing} —
+// missing — коды без данных в справочнике (сигнал проверить данные, не догадка).
+PZ.mergeOrderWithLookup = function (orderLines, lookupMap) {
+  const rows = [];
+  const missing = [];
+  for (const line of orderLines) {
+    const dims = lookupMap.get(line.article);
+    if (!dims) { missing.push(line.article); continue; }
+    const boxQty = Math.max(1, Math.ceil(line.qty / (dims.unitsPerBox || 1)));
+    rows.push(PZ.makeArticle({
+      article: line.article, qty: boxQty,
+      lengthCm: dims.lengthCm, widthCm: dims.widthCm, heightCm: dims.heightCm, weightPerBoxKg: dims.weightPerBoxKg,
+    }));
+  }
+  return { rows, missing };
 };
 
 // ---------- Раскладка паллет (перенос PalletBuilder.cs) ----------
@@ -1541,6 +1735,109 @@ function drawComposition(ctx, r, scene) {
 }
 </script>
 <script>
+// ===== Редактор раскладки: заказ (артикул+кол-во) + справочник → ручная раскладка =====
+// Документ — плоский набор строк (rows) с назначением каждой либо в пул (не распределено),
+// либо в конкретную шеренгу конкретной паллеты. Порядок коробов ВНУТРИ шеренги по-прежнему
+// считается автоматически (дугой по возрастанию высоты, как подтверждено бизнес-правилом) —
+// редактор решает только, какие артикулы в какой шеренге/паллете, разбивку и подмену граней.
+const PZE = {};
+
+PZE.createDoc = function (mergedRows) {
+  const rows = {};
+  for (const r of mergedRows) rows[r.id] = r;
+  return { rows, pool: mergedRows.map((r) => r.id), pallets: [{ lanes: [[], []] }] };
+};
+
+PZE.addPallet = function (doc) { doc.pallets.push({ lanes: [[], []] }); };
+
+PZE.removePallet = function (doc, idx) {
+  const p = doc.pallets[idx];
+  if (!p) return;
+  for (const lane of p.lanes) doc.pool.push(...lane);
+  doc.pallets.splice(idx, 1);
+};
+
+PZE.locate = function (doc, id) {
+  if (doc.pool.includes(id)) return { where: 'pool' };
+  for (let pi = 0; pi < doc.pallets.length; pi++) {
+    for (let li = 0; li < doc.pallets[pi].lanes.length; li++) {
+      if (doc.pallets[pi].lanes[li].includes(id)) return { where: 'lane', pi, li };
+    }
+  }
+  return null;
+};
+
+PZE.removeFromCurrent = function (doc, id) {
+  const loc = PZE.locate(doc, id);
+  if (!loc) return;
+  if (loc.where === 'pool') doc.pool = doc.pool.filter((x) => x !== id);
+  else doc.pallets[loc.pi].lanes[loc.li] = doc.pallets[loc.pi].lanes[loc.li].filter((x) => x !== id);
+};
+
+PZE.moveTo = function (doc, id, dest) {
+  PZE.removeFromCurrent(doc, id);
+  if (dest.where === 'pool') doc.pool.push(id);
+  else doc.pallets[dest.pi].lanes[dest.li].push(id);
+};
+
+// Разбивает строку на две — новая часть получает splitQty штук и остаётся рядом
+// (в той же шеренге/пуле), исходная теряет эти штуки. Возвращает id новой строки.
+PZE.splitRow = function (doc, id, splitQty) {
+  const row = doc.rows[id];
+  if (!row || !Number.isFinite(splitQty) || splitQty <= 0 || splitQty >= row.qty) return null;
+  const newRow = PZ.makeArticle({
+    article: row.article, qty: splitQty, lengthCm: row.lengthCm, widthCm: row.widthCm,
+    heightCm: row.heightCm, weightPerBoxKg: row.weightPerBoxKg,
+  });
+  row.qty -= splitQty;
+  doc.rows[newRow.id] = newRow;
+  const loc = PZE.locate(doc, id);
+  if (loc) { if (loc.where === 'pool') doc.pool.push(newRow.id); else doc.pallets[loc.pi].lanes[loc.li].push(newRow.id); }
+  else doc.pool.push(newRow.id);
+  return newRow.id;
+};
+
+PZE.swapLengthHeight = function (doc, id) {
+  const row = doc.rows[id];
+  if (!row) return;
+  const l = row.lengthCm; row.lengthCm = row.heightCm; row.heightCm = l;
+};
+
+PZE.removeRow = function (doc, id) {
+  PZE.removeFromCurrent(doc, id);
+  delete doc.rows[id];
+};
+
+// Собирает doc в структуру, которую понимают уже существующие PZ.buildScene/PZR —
+// пустые шеренги допустимы (buildScene просто не даёт для них колонок), поэтому
+// лэйны НЕ фильтруются — иначе индекс шеренги (чёт/нечет = прижим сверху/снизу) съедет.
+PZE.buildPalletsForRender = function (doc) {
+  return doc.pallets.map((p, idx) => ({
+    index: idx,
+    groups: p.lanes.map((laneIds) => ({ articles: laneIds.map((id) => doc.rows[id]).filter(Boolean) })),
+  }));
+};
+
+PZE.serializeDoc = function (doc) {
+  const rows = {};
+  for (const id in doc.rows) {
+    const r = doc.rows[id];
+    rows[id] = { id: r.id, article: r.article, qty: r.qty, lengthCm: r.lengthCm, widthCm: r.widthCm, heightCm: r.heightCm, weightPerBoxKg: r.weightPerBoxKg };
+  }
+  return JSON.stringify({ rows, pool: doc.pool, pallets: doc.pallets });
+};
+
+PZE.deserializeDoc = function (json) {
+  const raw = JSON.parse(json);
+  const rows = {};
+  for (const id in raw.rows) {
+    PZ.bumpIdCounter(id);
+    rows[id] = PZ.makeArticle(raw.rows[id]);
+  }
+  return { rows, pool: raw.pool || [], pallets: raw.pallets && raw.pallets.length ? raw.pallets : [{ lanes: [[], []] }] };
+};
+</script>
+<script>
 // ===== UI-логика приложения =====
 (function () {
   const state = {
@@ -1551,7 +1848,9 @@ function drawComposition(ctx, r, scene) {
     cards: [], // {canvas, pallet}
     shipment: { orderNumber: '', shipmentDate: '' },
     fileName: '',
+    lookupMap: null,
   };
+  let editorDoc = null;
 
   const $ = (sel) => document.querySelector(sel);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -1567,6 +1866,7 @@ function drawComposition(ctx, r, scene) {
   const grid = $('#grid');
   const emptyState = $('#emptyState');
   const resultsSection = $('#resultsSection');
+  const editorSection = $('#editorSection');
   const summaryLine = $('#summaryLine');
   const lightbox = $('#lightbox');
   const lightboxImg = $('#lightboxImg');
@@ -1577,6 +1877,7 @@ function drawComposition(ctx, r, scene) {
   const inBlocksPerPallet = $('#cfgBlocksPerPallet');
   const inOrderNumber = $('#shipOrderNumber');
   const inShipDate = $('#shipDate');
+  const inLookupUrl = $('#cfgLookupUrl');
 
   function showError(msg) {
     errorBox.textContent = msg;
@@ -1591,6 +1892,13 @@ function drawComposition(ctx, r, scene) {
     state.shipment.shipmentDate = formatDateRu(inShipDate.value);
   }
 
+  function hideAllPanels() {
+    emptyState.hidden = true;
+    resultsSection.hidden = true;
+    editorSection.hidden = true;
+  }
+
+  // ---------- Обычный поток: уже готовый файл раскладки (как раньше) ----------
   function rebuildAndRender() {
     if (!state.blocks) return;
     readConfigFromUI();
@@ -1620,7 +1928,7 @@ function drawComposition(ctx, r, scene) {
 
       const cap = el('div', 'thumbCaption');
       cap.appendChild(el('span', null, `Паллета ${pallet.index + 1}`));
-      const dlBtn = el('button', 'smallBtn', 'PNG');
+      const dlBtn = el('button', 'smallBtn', 'PNG'); dlBtn.type = 'button';
       dlBtn.addEventListener('click', (ev) => { ev.stopPropagation(); downloadPng(canvas, `pallet-${pallet.index + 1}.png`); });
       cap.appendChild(dlBtn);
       card.appendChild(cap);
@@ -1629,8 +1937,10 @@ function drawComposition(ctx, r, scene) {
       grid.appendChild(card);
     });
 
+    hideAllPanels();
     emptyState.hidden = state.cards.length > 0;
     resultsSection.hidden = state.cards.length === 0;
+    $('#backToEditorBtn').hidden = !editorDoc;
     const totalColumns = state.scenes.reduce((s, sc) => s + sc.columns.length, 0);
     summaryLine.textContent = `Файл: ${state.fileName} · паллет: ${state.pallets.length} · столбиков: ${totalColumns}`;
   }
@@ -1673,21 +1983,314 @@ function drawComposition(ctx, r, scene) {
     return `${base || 'паллеты'}.${ext}`;
   }
 
+  // ---------- Справочник габаритов (Google Sheets, TSV) ----------
+  async function fetchLookup(url, force) {
+    if (!force) {
+      try {
+        const cached = JSON.parse(localStorage.getItem('pz-lookup-cache') || 'null');
+        if (cached && cached.url === url && cached.tsv) {
+          state.lookupMap = PZ.parseLookupTsv(cached.tsv);
+          return state.lookupMap;
+        }
+      } catch (e) { /* игнор — просто перезагрузим */ }
+    }
+    let resp;
+    try {
+      resp = await fetch(url);
+    } catch (e) {
+      if (location.protocol === 'file:') {
+        throw new Error('Браузер блокирует загрузку справочника при открытии файла двойным кликом (file://) — так устроена защита от кросс-доменных запросов. Откройте приложение по обычной ссылке (например, опубликованную страницу), там это работает. Готовые раскладки (файлы с габаритами) при этом продолжают работать офлайн как обычно.');
+      }
+      throw new Error('Не удалось загрузить справочник — проверьте интернет-соединение и ссылку. (' + e.message + ')');
+    }
+    if (!resp.ok) throw new Error(`Не удалось загрузить справочник (HTTP ${resp.status}). Проверьте, что таблица открыта «по ссылке — читатель», и что ссылка ведёт на export?format=tsv.`);
+    const tsv = await resp.text();
+    const map = PZ.parseLookupTsv(tsv);
+    state.lookupMap = map;
+    try { localStorage.setItem('pz-lookup-cache', JSON.stringify({ url, tsv, fetchedAt: Date.now() })); } catch (e) { /* не критично */ }
+    return map;
+  }
+
+  async function ensureLookup(force) {
+    const url = inLookupUrl.value.trim();
+    if (!url) throw new Error('Укажите ссылку на таблицу-справочник в настройках.');
+    return fetchLookup(url, force);
+  }
+
+  // ---------- Редактор раскладки (заказ + справочник → ручная сборка) ----------
+  function saveDraft() {
+    if (!editorDoc) return;
+    try {
+      localStorage.setItem('pz-editor-doc', PZE.serializeDoc(editorDoc));
+      localStorage.setItem('pz-editor-filename', state.fileName || '');
+    } catch (e) { /* не критично */ }
+  }
+  function loadDraft() {
+    try {
+      const json = localStorage.getItem('pz-editor-doc');
+      if (!json) return null;
+      state.fileName = localStorage.getItem('pz-editor-filename') || '';
+      return PZE.deserializeDoc(json);
+    } catch (e) { return null; }
+  }
+  function clearDraftStorage() {
+    try { localStorage.removeItem('pz-editor-doc'); localStorage.removeItem('pz-editor-filename'); } catch (e) { /* не критично */ }
+  }
+
+  function onDocChanged() {
+    saveDraft();
+    renderEditor();
+  }
+
+  function allDestinations(doc) {
+    const dests = [{ where: 'pool' }];
+    doc.pallets.forEach((p, pi) => { p.lanes.forEach((_, li) => dests.push({ where: 'lane', pi, li })); });
+    return dests;
+  }
+  function destLabel(dest) {
+    return dest.where === 'pool' ? 'Пул (не распределено)' : `Паллета ${dest.pi + 1} · Шеренга ${dest.li + 1}`;
+  }
+
+  function chipEl(doc, id) {
+    const row = doc.rows[id];
+    const chip = el('div', 'chip');
+    chip.draggable = true;
+    chip.dataset.id = id;
+
+    const title = el('div', 'chipTitle');
+    title.appendChild(el('span', null, row.article));
+    chip.appendChild(title);
+
+    const dims = el('div', 'chipDims');
+    const mkNum = (cls, val, step, min) => {
+      const i = document.createElement('input');
+      i.type = 'number'; i.className = cls; i.value = val; i.step = step; i.min = min;
+      return i;
+    };
+    const qtyInput = mkNum('chipQtyInput', row.qty, 1, 1);
+    const lInput = mkNum('dimL', round1(row.lengthCm), 0.1, 0.1);
+    const wInput = mkNum('dimW', round1(row.widthCm), 0.1, 0.1);
+    const hInput = mkNum('dimH', round1(row.heightCm), 0.1, 0.1);
+    const wtInput = mkNum('dimWt', round2(row.weightPerBoxKg), 0.01, 0.01);
+    dims.appendChild(qtyInput); dims.appendChild(document.createTextNode(' шт · '));
+    dims.appendChild(lInput); dims.appendChild(document.createTextNode('×'));
+    dims.appendChild(wInput); dims.appendChild(document.createTextNode('×'));
+    dims.appendChild(hInput); dims.appendChild(document.createTextNode(' см, '));
+    dims.appendChild(wtInput); dims.appendChild(document.createTextNode(' кг'));
+    chip.appendChild(dims);
+
+    qtyInput.addEventListener('change', () => { row.qty = Math.max(1, Math.round(parseFloat(qtyInput.value) || 1)); onDocChanged(); });
+    lInput.addEventListener('change', () => { row.lengthCm = parseFloat(lInput.value) || row.lengthCm; onDocChanged(); });
+    wInput.addEventListener('change', () => { row.widthCm = parseFloat(wInput.value) || row.widthCm; onDocChanged(); });
+    hInput.addEventListener('change', () => { row.heightCm = parseFloat(hInput.value) || row.heightCm; onDocChanged(); });
+    wtInput.addEventListener('change', () => { row.weightPerBoxKg = parseFloat(wtInput.value) || row.weightPerBoxKg; onDocChanged(); });
+
+    const actions = el('div', 'chipActions');
+
+    const moveSelect = document.createElement('select');
+    moveSelect.className = 'chipMove';
+    const loc = PZE.locate(doc, id);
+    allDestinations(doc).forEach((dest) => {
+      const opt = document.createElement('option');
+      opt.textContent = destLabel(dest);
+      opt.value = JSON.stringify(dest);
+      if (loc && ((loc.where === 'pool' && dest.where === 'pool') ||
+        (loc.where === 'lane' && dest.where === 'lane' && loc.pi === dest.pi && loc.li === dest.li))) opt.selected = true;
+      moveSelect.appendChild(opt);
+    });
+    moveSelect.addEventListener('change', () => { PZE.moveTo(doc, id, JSON.parse(moveSelect.value)); onDocChanged(); });
+    actions.appendChild(moveSelect);
+
+    const swapBtn = el('button', 'chipBtn', '⇄ Д/В'); swapBtn.type = 'button';
+    swapBtn.title = 'Поменять местами длину и высоту (если короб не помещается в этой ориентации)';
+    swapBtn.addEventListener('click', () => { PZE.swapLengthHeight(doc, id); onDocChanged(); });
+    actions.appendChild(swapBtn);
+
+    if (row.qty > 1) {
+      const splitBtn = el('button', 'chipBtn', '✂ Разделить'); splitBtn.type = 'button';
+      splitBtn.title = 'Отделить часть количества в новый столбик';
+      splitBtn.addEventListener('click', () => {
+        const ans = prompt(`Сколько из ${row.qty} шт отделить в новый столбик?`, Math.floor(row.qty / 2));
+        if (ans === null) return;
+        const n = parseInt(ans, 10);
+        if (n && n > 0 && n < row.qty) { PZE.splitRow(doc, id, n); onDocChanged(); }
+        else if (ans.trim() !== '') alert('Число должно быть больше 0 и меньше текущего количества.');
+      });
+      actions.appendChild(splitBtn);
+    }
+
+    const removeBtn = el('button', 'chipBtn', '× Удалить'); removeBtn.type = 'button';
+    removeBtn.title = 'Убрать эту строку из заказа совсем';
+    removeBtn.addEventListener('click', () => {
+      if (confirm(`Удалить ${row.article} (${row.qty} шт) из заказа?`)) { PZE.removeRow(doc, id); onDocChanged(); }
+    });
+    actions.appendChild(removeBtn);
+
+    chip.appendChild(actions);
+
+    chip.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', id); chip.classList.add('dragging'); });
+    chip.addEventListener('dragend', () => chip.classList.remove('dragging'));
+
+    return chip;
+  }
+  function round1(v) { return Math.round(v * 10) / 10; }
+  function round2(v) { return Math.round(v * 100) / 100; }
+
+  function wireDropZone(container, dest) {
+    container.addEventListener('dragover', (e) => { e.preventDefault(); container.classList.add('dragOver'); });
+    container.addEventListener('dragleave', () => container.classList.remove('dragOver'));
+    container.addEventListener('drop', (e) => {
+      e.preventDefault(); container.classList.remove('dragOver');
+      const id = e.dataTransfer.getData('text/plain');
+      if (id && editorDoc.rows[id]) { PZE.moveTo(editorDoc, id, dest); onDocChanged(); }
+    });
+  }
+
+  function renderEditor() {
+    if (!editorDoc) return;
+    readConfigFromUI();
+    const doc = editorDoc;
+
+    const poolChips = $('#poolChips');
+    poolChips.innerHTML = '';
+    doc.pool.forEach((id) => poolChips.appendChild(chipEl(doc, id)));
+    wireDropZone(poolChips, { where: 'pool' });
+
+    const palletsContainer = $('#editorPallets');
+    palletsContainer.innerHTML = '';
+    let palletsForRender;
+    try {
+      palletsForRender = PZE.buildPalletsForRender(doc);
+    } catch (e) {
+      showError('Ошибка построения раскладки: ' + e.message);
+      return;
+    }
+
+    doc.pallets.forEach((p, pi) => {
+      const box = el('div', 'editorPallet');
+      const head = el('div', 'editorPalletHead');
+      head.appendChild(el('b', null, `Паллета ${pi + 1}`));
+      const removeBtn = el('button', 'smallBtn', 'Удалить паллету'); removeBtn.type = 'button';
+      removeBtn.addEventListener('click', () => {
+        if (confirm('Удалить паллету? Короба вернутся в пул «не распределено».')) { PZE.removePallet(doc, pi); onDocChanged(); }
+      });
+      head.appendChild(removeBtn);
+      box.appendChild(head);
+
+      const lanes = el('div', 'editorLanes');
+      p.lanes.forEach((laneIds, li) => {
+        const lane = el('div', 'editorLane');
+        lane.appendChild(el('div', 'laneLabel', `Шеренга ${li + 1}`));
+        const row = el('div', 'chipRow');
+        laneIds.forEach((id) => row.appendChild(chipEl(doc, id)));
+        wireDropZone(row, { where: 'lane', pi, li });
+        lane.appendChild(row);
+        lanes.appendChild(lane);
+      });
+      box.appendChild(lanes);
+
+      try {
+        const pallet = palletsForRender[pi];
+        const scene = PZ.buildScene(pallet, state.config, `Паллета ${pi + 1}`);
+        const canvas = PZR.composePallet(pallet, scene, state.shipment);
+        const img = document.createElement('img');
+        img.className = 'editorPreview';
+        img.src = canvas.toDataURL('image/png');
+        img.alt = `Превью паллеты ${pi + 1}`;
+        box.appendChild(img);
+      } catch (e) {
+        box.appendChild(el('div', 'errorBox', 'Не удалось отрисовать превью: ' + e.message));
+      }
+
+      palletsContainer.appendChild(box);
+    });
+
+    const totalRows = Object.keys(doc.rows).length;
+    $('#editorSummary').textContent =
+      `Артикулов в работе: ${totalRows} · распределено: ${totalRows - doc.pool.length} · в пуле: ${doc.pool.length} · паллет: ${doc.pallets.length}`;
+  }
+
+  function showEditor() {
+    hideAllPanels();
+    editorSection.hidden = false;
+  }
+
+  async function startEditor(orderLines) {
+    const lookup = await ensureLookup(false);
+    const { rows, missing } = PZ.mergeOrderWithLookup(orderLines, lookup);
+    if (rows.length === 0) throw new Error('Ни один артикул из заказа не найден в справочнике — нечего раскладывать.');
+    editorDoc = PZE.createDoc(rows);
+    showEditor();
+    const missingBox = $('#missingArticlesBox');
+    if (missing.length) {
+      missingBox.hidden = false;
+      missingBox.textContent = `Не найдены в справочнике (${missing.length}): ${missing.join(', ')} — эти строки заказа пропущены. Добавьте их в таблицу-справочник или в заказ вручную.`;
+    } else {
+      missingBox.hidden = true;
+    }
+    onDocChanged();
+  }
+
+  $('#addPalletBtn').addEventListener('click', () => { PZE.addPallet(editorDoc); onDocChanged(); });
+
+  $('#refreshLookupBtn').addEventListener('click', async () => {
+    try {
+      await ensureLookup(true);
+      showError('');
+      renderEditor();
+    } catch (e) {
+      showError('Не удалось обновить справочник: ' + e.message);
+    }
+  });
+
+  $('#clearDraftBtn').addEventListener('click', () => {
+    if (!confirm('Стереть текущий черновик редактора? Действие необратимо.')) return;
+    editorDoc = null;
+    clearDraftStorage();
+    hideAllPanels();
+    emptyState.hidden = false;
+  });
+
+  $('#finishEditingBtn').addEventListener('click', () => {
+    if (!editorDoc) return;
+    readConfigFromUI();
+    try {
+      state.pallets = PZE.buildPalletsForRender(editorDoc);
+      state.scenes = state.pallets.map((p) => PZ.buildScene(p, state.config, `Паллета ${p.index + 1}`));
+      renderCards();
+      showError('');
+    } catch (e) {
+      showError('Ошибка построения раскладки: ' + e.message);
+    }
+  });
+
+  $('#backToEditorBtn').addEventListener('click', () => { showEditor(); renderEditor(); });
+
+  // ---------- Загрузка файла: автоопределение — готовая раскладка или голый заказ ----------
   async function handleFile(file) {
     showError('');
     state.fileName = file.name;
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array', cellDates: false });
-      const sheetName = wb.SheetNames[0];
-      const ws = wb.Sheets[sheetName];
+      const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
-      state.blocks = PZ.parseBlocks(rows);
-      rebuildAndRender();
+
+      if (PZ.looksLikeLayout(rows)) {
+        editorDoc = null;
+        state.blocks = PZ.parseBlocks(rows);
+        rebuildAndRender();
+        return;
+      }
+      if (PZ.looksLikeOrder(rows)) {
+        const lines = PZ.parseOrder(rows);
+        await startEditor(lines);
+        return;
+      }
+      throw new Error('Не удалось определить формат файла: это не похоже ни на готовую раскладку (нет колонок габаритов), ни на заказ (нет колонки количества).');
     } catch (e) {
-      state.blocks = null;
-      state.pallets = []; state.scenes = []; state.cards = [];
-      resultsSection.hidden = true; emptyState.hidden = false;
+      state.blocks = null; state.pallets = []; state.scenes = []; state.cards = [];
+      hideAllPanels(); emptyState.hidden = false;
       showError('Не удалось обработать файл: ' + e.message);
     }
   }
@@ -1706,7 +2309,7 @@ function drawComposition(ctx, r, scene) {
   });
 
   [inLength, inWidth, inBlocksPerPallet, inOrderNumber, inShipDate].forEach((input) => {
-    input.addEventListener('change', rebuildAndRender);
+    input.addEventListener('change', () => { if (editorDoc && !editorSection.hidden) onDocChanged(); else rebuildAndRender(); });
   });
 
   $('#settingsToggle').addEventListener('click', () => {
@@ -1739,6 +2342,14 @@ function drawComposition(ctx, r, scene) {
     if (!helpModal.hidden) helpModal.hidden = true;
     if (!lightbox.hidden) lightbox.hidden = true;
   });
+
+  // ---- Восстановление черновика редактора, если он остался с прошлого раза ----
+  const restored = loadDraft();
+  if (restored) {
+    editorDoc = restored;
+    showEditor();
+    renderEditor();
+  }
 })();
 </script>
 </body>
