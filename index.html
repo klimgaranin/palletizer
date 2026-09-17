@@ -124,7 +124,7 @@
 
   .chip {
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
-    display: flex; flex-direction: column; gap: 6px; width: 190px; cursor: grab;
+    display: flex; flex-direction: column; gap: 6px; width: 212px; cursor: grab;
   }
   .chip.dragging { opacity: 0.4; }
   .chipTitle { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; gap: 6px; }
@@ -135,6 +135,7 @@
     border-radius: 4px; background: var(--input-bg); color: var(--text); text-align: center;
   }
   .chipQtyInput { width: 44px !important; }
+  .dimWt { width: 56px !important; }
   .chipActions { display: flex; gap: 4px; flex-wrap: wrap; }
   .chipBtn {
     border: 1px solid var(--border); background: var(--card-bg); color: var(--text); border-radius: 6px;
@@ -271,7 +272,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.1.0</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.1.1</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -2059,6 +2060,7 @@ PZE.deserializeDoc = function (json) {
 
     const title = el('div', 'chipTitle');
     title.appendChild(el('span', null, row.article));
+    title.appendChild(el('span', 'chipQty', `H:${Math.round(row.stackHeightCm)}`));
     chip.appendChild(title);
 
     const dims = el('div', 'chipDims');
@@ -2153,7 +2155,10 @@ PZE.deserializeDoc = function (json) {
 
     const poolChips = $('#poolChips');
     poolChips.innerHTML = '';
-    doc.pool.forEach((id) => poolChips.appendChild(chipEl(doc, id)));
+    // Пул сортируется по высоте столбика (по убыванию) — это главный ориентир при
+    // ручной раскладке, самые высокие/приоритетные артикулы должны быть видны первыми.
+    const poolSorted = doc.pool.slice().sort((a, b) => doc.rows[b].stackHeightCm - doc.rows[a].stackHeightCm);
+    poolSorted.forEach((id) => poolChips.appendChild(chipEl(doc, id)));
     wireDropZone(poolChips, { where: 'pool' });
 
     const palletsContainer = $('#editorPallets');
