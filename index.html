@@ -150,7 +150,18 @@
   .editorLanes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   @media (max-width: 620px) { .editorLanes { grid-template-columns: 1fr; } }
   .editorLane { background: var(--bg); border: 1px dashed var(--border); border-radius: 8px; padding: 10px; min-height: 80px; }
-  .laneLabel { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+  .laneLabel { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+  .laneHint { font-size: 10px; font-weight: 500; font-style: italic; color: var(--muted); margin-bottom: 8px; line-height: 1.4; }
+
+  .orderModeToggle {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+    color: var(--text); cursor: pointer; background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+  }
+  .orderModeToggle input { cursor: pointer; }
+
+  .chip.insertBefore { box-shadow: inset 3px 0 0 var(--accent); }
+  .chip.insertAfter { box-shadow: inset -3px 0 0 var(--accent); }
   .editorPreview { width: 100%; border-radius: 8px; border: 1px solid var(--border); display: block; }
 
   .appFooter { text-align: center; color: var(--muted); font-size: 12px; font-weight: 600; margin-top: 32px; }
@@ -245,6 +256,10 @@
     <div class="resultsHeader">
       <div class="summaryLine" id="editorSummary"></div>
       <div class="topActions">
+        <label class="orderModeToggle" title="Автосортировка расставляет короба в шеренге по высоте (короче к краю, выше к центру). В ручном режиме порядок внутри шеренги задаётся перетаскиванием.">
+          <input type="checkbox" id="autoSortToggle" checked />
+          <span id="autoSortLabel">Порядок в шеренге: авто</span>
+        </label>
         <button type="button" class="ghostBtn" id="addPalletBtn">+ Паллета</button>
         <button type="button" class="ghostBtn" id="refreshLookupBtn">Обновить справочник</button>
         <button type="button" class="ghostBtn" id="clearDraftBtn">Начать заново</button>
@@ -272,7 +287,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.1.1</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.2.0</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -319,6 +334,7 @@
         <li><b>✂ Разделить</b> — отделить часть количества в отдельный столбик (например, часть коробов на одну паллету, часть на другую).</li>
         <li><b>⇄ Д/В</b> — поменять местами длину и высоту короба, если так он лучше ложится.</li>
         <li>Габариты, вес и количество на карточке можно просто вписать вручную поверх подтянутых из справочника.</li>
+        <li><b>Порядок в шеренге: авто/вручную</b> — по умолчанию короба внутри шеренги сами расставляются по высоте столбика (короче к краю, выше к центру). Переключив в «вручную», можно перетащить карточку на другую внутри шеренги, чтобы вставить её до/после — тогда порядок задаёте сами.</li>
         <li>Черновик автоматически сохраняется в этом браузере — обновление страницы работу не сотрёт. «Начать заново» стирает черновик безвозвратно.</li>
         <li>«Готово → карточки» строит финальные карточки паллет из текущей раскладки — дальше с ними можно работать как обычно (PDF/PNG).</li>
       </ul>
@@ -984,6 +1000,9 @@ function arcOrder(ascending) {
   }
   return result;
 }
+// Публичная обёртка — нужна редактору, чтобы показать порядок расстановки в шеренге
+// (от края к центру по возрастанию высоты) ещё до финального рендера.
+PZ.arcOrderPreview = (articles) => arcOrder([...articles].sort((a, b) => a.stackHeightCm - b.stackHeightCm));
 
 // ---------- Цвет по артикулу (перенос ColorPalette.cs) ----------
 function fnvMix(s, seed) {
@@ -1061,14 +1080,19 @@ PZ.lightenHsl = function (c, factor) {
 };
 
 // ---------- Сборка сцены (перенос Scene.cs / SceneBuilder) ----------
-PZ.buildScene = function (pallet, config, title) {
+// options.manualOrder=true — не пересортировывать по дуге, взять артикулы блока
+// строго в том порядке, в котором они переданы (нужно редактору для ручного режима
+// расстановки внутри шеренги). По умолчанию — обычное подтверждённое бизнес-правило:
+// всегда по дуге (короче к краю, выше к центру), порядок исходных данных не важен.
+PZ.buildScene = function (pallet, config, title, options) {
+  const manualOrder = !!(options && options.manualOrder);
   const palletLength = config.pallet.lengthMm / 10.0;
   const palletWidth = config.pallet.widthMm / 10.0;
   const centerX = palletLength / 2, centerY = palletWidth / 2;
   const columns = [];
 
   pallet.groups.forEach((block, laneIdx) => {
-    const ordered = arcOrder(PZ.orderColumns(block));
+    const ordered = manualOrder ? [...block.articles] : arcOrder(PZ.orderColumns(block));
     if (ordered.length === 0) return;
     const laneLength = ordered.reduce((s, a) => s + a.lengthCm, 0);
     let x = centerX - laneLength / 2;
@@ -1738,15 +1762,16 @@ function drawComposition(ctx, r, scene) {
 <script>
 // ===== Редактор раскладки: заказ (артикул+кол-во) + справочник → ручная раскладка =====
 // Документ — плоский набор строк (rows) с назначением каждой либо в пул (не распределено),
-// либо в конкретную шеренгу конкретной паллеты. Порядок коробов ВНУТРИ шеренги по-прежнему
-// считается автоматически (дугой по возрастанию высоты, как подтверждено бизнес-правилом) —
-// редактор решает только, какие артикулы в какой шеренге/паллете, разбивку и подмену граней.
+// либо в конкретную шеренгу конкретной паллеты. По умолчанию порядок ВНУТРИ шеренги считается
+// автоматически (дугой по возрастанию высоты) — это подтверждённое бизнес-правило. Но
+// doc.autoSort можно выключить (переключатель в UI) — тогда порядок внутри шеренги берётся
+// строго из массива lane (можно двигать перетаскиванием карточка-на-карточку).
 const PZE = {};
 
 PZE.createDoc = function (mergedRows) {
   const rows = {};
   for (const r of mergedRows) rows[r.id] = r;
-  return { rows, pool: mergedRows.map((r) => r.id), pallets: [{ lanes: [[], []] }] };
+  return { rows, pool: mergedRows.map((r) => r.id), pallets: [{ lanes: [[], []] }], autoSort: true };
 };
 
 PZE.addPallet = function (doc) { doc.pallets.push({ lanes: [[], []] }); };
@@ -1779,6 +1804,17 @@ PZE.moveTo = function (doc, id, dest) {
   PZE.removeFromCurrent(doc, id);
   if (dest.where === 'pool') doc.pool.push(id);
   else doc.pallets[dest.pi].lanes[dest.li].push(id);
+};
+
+// Ручной режим: переносит id в конкретную шеренгу на позицию рядом с beforeId (после —
+// если after=true). Если beforeId не задан/не найден — просто в конец шеренги.
+PZE.moveToPosition = function (doc, id, dest, beforeId, after) {
+  PZE.removeFromCurrent(doc, id);
+  const lane = doc.pallets[dest.pi].lanes[dest.li];
+  let idx = beforeId ? lane.indexOf(beforeId) : -1;
+  if (idx === -1) { lane.push(id); return; }
+  if (after) idx++;
+  lane.splice(idx, 0, id);
 };
 
 // Разбивает строку на две — новая часть получает splitQty штук и остаётся рядом
@@ -1825,7 +1861,7 @@ PZE.serializeDoc = function (doc) {
     const r = doc.rows[id];
     rows[id] = { id: r.id, article: r.article, qty: r.qty, lengthCm: r.lengthCm, widthCm: r.widthCm, heightCm: r.heightCm, weightPerBoxKg: r.weightPerBoxKg };
   }
-  return JSON.stringify({ rows, pool: doc.pool, pallets: doc.pallets });
+  return JSON.stringify({ rows, pool: doc.pool, pallets: doc.pallets, autoSort: doc.autoSort !== false });
 };
 
 PZE.deserializeDoc = function (json) {
@@ -1835,7 +1871,11 @@ PZE.deserializeDoc = function (json) {
     PZ.bumpIdCounter(id);
     rows[id] = PZ.makeArticle(raw.rows[id]);
   }
-  return { rows, pool: raw.pool || [], pallets: raw.pallets && raw.pallets.length ? raw.pallets : [{ lanes: [[], []] }] };
+  return {
+    rows, pool: raw.pool || [],
+    pallets: raw.pallets && raw.pallets.length ? raw.pallets : [{ lanes: [[], []] }],
+    autoSort: raw.autoSort !== false,
+  };
 };
 </script>
 <script>
@@ -2133,16 +2173,61 @@ PZE.deserializeDoc = function (json) {
     chip.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', id); chip.classList.add('dragging'); });
     chip.addEventListener('dragend', () => chip.classList.remove('dragging'));
 
+    // Ручной режим: наведение на конкретную карточку внутри шеренги позволяет вставить
+    // перетаскиваемую карточку до/после неё (какая половина карточки под курсором).
+    // В авто-режиме порядок не редактируется — обычное поведение (перенос в шеренгу целиком).
+    chip.addEventListener('dragover', (e) => {
+      if (doc.autoSort) return;
+      const loc = PZE.locate(doc, id);
+      if (!loc || loc.where !== 'lane') return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = chip.getBoundingClientRect();
+      const after = (e.clientX - rect.left) > rect.width / 2;
+      chip.classList.toggle('insertAfter', after);
+      chip.classList.toggle('insertBefore', !after);
+    });
+    chip.addEventListener('dragleave', () => { chip.classList.remove('insertAfter', 'insertBefore'); });
+    chip.addEventListener('drop', (e) => {
+      if (doc.autoSort) return;
+      const loc = PZE.locate(doc, id);
+      if (!loc || loc.where !== 'lane') return;
+      e.preventDefault();
+      e.stopPropagation();
+      chip.classList.remove('insertAfter', 'insertBefore');
+      const draggedId = e.dataTransfer.getData('text/plain');
+      if (!draggedId || draggedId === id || !doc.rows[draggedId]) return;
+      const rect = chip.getBoundingClientRect();
+      const after = (e.clientX - rect.left) > rect.width / 2;
+      PZE.moveToPosition(doc, draggedId, { pi: loc.pi, li: loc.li }, id, after);
+      onDocChanged();
+    });
+
     return chip;
   }
   function round1(v) { return Math.round(v * 10) / 10; }
   function round2(v) { return Math.round(v * 100) / 100; }
 
+  // Порядок внутри шеренги считается автоматически (arc-order) и от порядка
+  // перетаскивания не зависит — поэтому подсветку/сброс держим на уровне всего лэйна
+  // (не на отдельных карточках), а migание при наведении на дочерние карточки убираем
+  // счётчиком глубины (dragenter/dragleave иначе бесконечно чередуются на границах детей).
   function wireDropZone(container, dest) {
-    container.addEventListener('dragover', (e) => { e.preventDefault(); container.classList.add('dragOver'); });
-    container.addEventListener('dragleave', () => container.classList.remove('dragOver'));
+    let depth = 0;
+    container.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      depth++;
+      container.classList.add('dragOver');
+    });
+    container.addEventListener('dragover', (e) => { e.preventDefault(); });
+    container.addEventListener('dragleave', () => {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) container.classList.remove('dragOver');
+    });
     container.addEventListener('drop', (e) => {
-      e.preventDefault(); container.classList.remove('dragOver');
+      e.preventDefault();
+      depth = 0;
+      container.classList.remove('dragOver');
       const id = e.dataTransfer.getData('text/plain');
       if (id && editorDoc.rows[id]) { PZE.moveTo(editorDoc, id, dest); onDocChanged(); }
     });
@@ -2152,6 +2237,9 @@ PZE.deserializeDoc = function (json) {
     if (!editorDoc) return;
     readConfigFromUI();
     const doc = editorDoc;
+    if (doc.autoSort === undefined) doc.autoSort = true;
+    $('#autoSortToggle').checked = doc.autoSort;
+    $('#autoSortLabel').textContent = 'Порядок в шеренге: ' + (doc.autoSort ? 'авто' : 'вручную');
 
     const poolChips = $('#poolChips');
     poolChips.innerHTML = '';
@@ -2186,8 +2274,16 @@ PZE.deserializeDoc = function (json) {
       p.lanes.forEach((laneIds, li) => {
         const lane = el('div', 'editorLane');
         lane.appendChild(el('div', 'laneLabel', `Шеренга ${li + 1}`));
+        lane.appendChild(el('div', 'laneHint', doc.autoSort
+          ? 'Порядок внутри считается автоматически: от края (короче) к центру (выше).'
+          : 'Ручной режим: перетащите карточку на другую, чтобы вставить до/после неё.'));
         const row = el('div', 'chipRow');
-        laneIds.forEach((id) => row.appendChild(chipEl(doc, id)));
+        // В авто-режиме показываем карточки сразу в том порядке, в котором они лягут в
+        // итоговой раскладке (arc-order). В ручном — как расставил пользователь.
+        const displayOrder = doc.autoSort
+          ? PZ.arcOrderPreview(laneIds.map((id) => doc.rows[id]).filter(Boolean)).map((a) => a.id)
+          : laneIds;
+        displayOrder.forEach((id) => row.appendChild(chipEl(doc, id)));
         wireDropZone(row, { where: 'lane', pi, li });
         lane.appendChild(row);
         lanes.appendChild(lane);
@@ -2196,7 +2292,7 @@ PZE.deserializeDoc = function (json) {
 
       try {
         const pallet = palletsForRender[pi];
-        const scene = PZ.buildScene(pallet, state.config, `Паллета ${pi + 1}`);
+        const scene = PZ.buildScene(pallet, state.config, `Паллета ${pi + 1}`, { manualOrder: !doc.autoSort });
         const canvas = PZR.composePallet(pallet, scene, state.shipment);
         const img = document.createElement('img');
         img.className = 'editorPreview';
@@ -2238,6 +2334,25 @@ PZE.deserializeDoc = function (json) {
 
   $('#addPalletBtn').addEventListener('click', () => { PZE.addPallet(editorDoc); onDocChanged(); });
 
+  const autoSortToggle = $('#autoSortToggle');
+  const autoSortLabel = $('#autoSortLabel');
+  autoSortToggle.addEventListener('change', () => {
+    if (!editorDoc) return;
+    if (!autoSortToggle.checked) {
+      // Переходим в ручной режим — фиксируем в массивах шеренг текущий авто-порядок
+      // (arc-order), чтобы при выключении автосортировки ничего не «прыгнуло».
+      editorDoc.pallets.forEach((p) => {
+        p.lanes = p.lanes.map((laneIds) => {
+          const articles = laneIds.map((id) => editorDoc.rows[id]).filter(Boolean);
+          return PZ.arcOrderPreview(articles).map((a) => a.id);
+        });
+      });
+    }
+    editorDoc.autoSort = autoSortToggle.checked;
+    autoSortLabel.textContent = 'Порядок в шеренге: ' + (autoSortToggle.checked ? 'авто' : 'вручную');
+    onDocChanged();
+  });
+
   $('#refreshLookupBtn').addEventListener('click', async () => {
     try {
       await ensureLookup(true);
@@ -2261,7 +2376,8 @@ PZE.deserializeDoc = function (json) {
     readConfigFromUI();
     try {
       state.pallets = PZE.buildPalletsForRender(editorDoc);
-      state.scenes = state.pallets.map((p) => PZ.buildScene(p, state.config, `Паллета ${p.index + 1}`));
+      const manualOrder = !editorDoc.autoSort;
+      state.scenes = state.pallets.map((p) => PZ.buildScene(p, state.config, `Паллета ${p.index + 1}`, { manualOrder }));
       renderCards();
       showError('');
     } catch (e) {
