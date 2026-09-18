@@ -120,7 +120,7 @@
   }
   .editorPoolTitle { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
   .chipRow { display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px; }
-  .chipRow.dragOver { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 8px; }
+  .editorPool.dragOver, .editorLane.dragOver { outline: 2px dashed var(--accent); outline-offset: -2px; }
 
   .chip {
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
@@ -188,6 +188,16 @@
   .modalBody ul { margin: 6px 0; padding-left: 20px; }
   .modalBody li { margin-bottom: 4px; }
   .modalBody code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-weight: 700; }
+
+  .historyEmpty { color: var(--muted); font-weight: 600; text-align: center; padding: 30px 0; }
+  .historyRow {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .historyRow:last-child { border-bottom: none; }
+  .historyName { font-size: 14px; font-weight: 700; }
+  .historyMeta { font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+  .historyActions { display: flex; gap: 6px; flex-shrink: 0; }
   .modalClose {
     background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 6px;
     padding: 6px 12px; font-weight: 700; cursor: pointer;
@@ -232,6 +242,7 @@
 
   <div class="settingsBar">
     <button type="button" class="ghostBtn" id="settingsToggle">Настройки раскладки и отгрузки</button>
+    <button type="button" class="ghostBtn" id="historyBtn">История файлов</button>
   </div>
 
   <div class="settingsPanel" id="settingsPanel" hidden>
@@ -269,7 +280,7 @@
     </div>
     <div class="errorBox" id="missingArticlesBox" hidden></div>
 
-    <div class="editorPool">
+    <div class="editorPool" id="editorPoolBox">
       <div class="editorPoolTitle">Не распределено</div>
       <div class="chipRow" id="poolChips"></div>
     </div>
@@ -288,7 +299,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.2.1</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.3.0</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -297,6 +308,19 @@
     <button type="button" class="lightboxClose" id="lightboxClose">Закрыть ✕</button>
   </div>
   <img id="lightboxImg" alt="" />
+</div>
+
+<div class="modalOverlay" id="historyModal" hidden>
+  <div class="modalBox">
+    <div class="modalHeader">
+      <h2>История файлов</h2>
+      <div class="topActions">
+        <button type="button" class="ghostBtn" id="clearHistoryBtn">Очистить всё</button>
+        <button type="button" class="modalClose" id="historyClose">Закрыть ✕</button>
+      </div>
+    </div>
+    <div class="modalBody" id="historyList"></div>
+  </div>
 </div>
 
 <div class="modalOverlay" id="helpModal" hidden>
@@ -337,6 +361,7 @@
         <li>Габариты, вес и количество на карточке можно просто вписать вручную поверх подтянутых из справочника.</li>
         <li><b>Порядок в шеренге: авто/вручную</b> — по умолчанию короба внутри шеренги сами расставляются по высоте столбика (короче к краю, выше к центру). Переключив в «вручную», можно перетащить карточку на другую внутри шеренги, чтобы вставить её до/после — тогда порядок задаёте сами.</li>
         <li>Черновик автоматически сохраняется в этом браузере — обновление страницы работу не сотрёт. «Начать заново» стирает черновик безвозвратно.</li>
+        <li>Кнопка <b>«История файлов»</b> над областью загрузки — все файлы, которые вы открывали в этом браузере (и заказы, и готовые раскладки), с возможностью вернуться к любому из них в один клик.</li>
         <li>«Готово → карточки» строит финальные карточки паллет из текущей раскладки — дальше с ними можно работать как обычно (PDF/PNG).</li>
       </ul>
 
@@ -1891,6 +1916,7 @@ PZE.deserializeDoc = function (json) {
     shipment: { orderNumber: '', shipmentDate: '' },
     fileName: '',
     lookupMap: null,
+    activeHistoryId: null,
   };
   let editorDoc = null;
   // Кэш превью по индексу паллеты — рендер одной карточки (2 ракурса + вид сверху +
@@ -1910,6 +1936,55 @@ PZE.deserializeDoc = function (json) {
       len: state.config.pallet.lengthMm, wid: state.config.pallet.widthMm,
       order: state.shipment.orderNumber, date: state.shipment.shipmentDate,
     });
+  }
+
+  // ---------- История загруженных файлов ----------
+  // Каждый успешно обработанный файл (готовая раскладка или заказ) попадает в список —
+  // так можно вернуться к любому из них позже, не пересохраняя файл заново. Для заказов
+  // хранится вся редактируемая раскладка (обновляется по каждому изменению), для готовых
+  // раскладок — разобранные блоки (габариты уже внутри файла, редактировать нечего).
+  const HISTORY_KEY = 'pz-history';
+  const ACTIVE_KEY = 'pz-active-history-id';
+  const HISTORY_LIMIT = 25;
+
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveHistoryList(list) {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) { /* не критично */ }
+  }
+  function upsertHistory(entry) {
+    const list = loadHistory().filter((e) => e.id !== entry.id);
+    list.unshift(entry);
+    list.sort((a, b) => b.updatedAt - a.updatedAt);
+    saveHistoryList(list.slice(0, HISTORY_LIMIT));
+  }
+  function removeHistoryEntry(id) {
+    saveHistoryList(loadHistory().filter((e) => e.id !== id));
+  }
+  function setActiveHistoryId(id) {
+    try { if (id) localStorage.setItem(ACTIVE_KEY, id); else localStorage.removeItem(ACTIVE_KEY); } catch (e) { /* не критично */ }
+  }
+  function getActiveHistoryId() {
+    try { return localStorage.getItem(ACTIVE_KEY); } catch (e) { return null; }
+  }
+  function genHistoryId() { return 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function serializeLayoutBlocks(blocks) {
+    return JSON.stringify(blocks.map((b) => ({
+      articles: b.articles.map((a) => ({
+        article: a.article, qty: a.qty, lengthCm: a.lengthCm, widthCm: a.widthCm, heightCm: a.heightCm, weightPerBoxKg: a.weightPerBoxKg,
+      })),
+    })));
+  }
+  function deserializeLayoutBlocks(json) {
+    const raw = JSON.parse(json);
+    return raw.map((b) => ({ articles: b.articles.map((a) => PZ.makeArticle(a)) }));
+  }
+
+  function formatHistoryDate(ts) {
+    try { return new Date(ts).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return ''; }
   }
 
   const $ = (sel) => document.querySelector(sel);
@@ -2079,22 +2154,13 @@ PZE.deserializeDoc = function (json) {
 
   // ---------- Редактор раскладки (заказ + справочник → ручная сборка) ----------
   function saveDraft() {
-    if (!editorDoc) return;
+    if (!editorDoc || !state.activeHistoryId) return;
     try {
-      localStorage.setItem('pz-editor-doc', PZE.serializeDoc(editorDoc));
-      localStorage.setItem('pz-editor-filename', state.fileName || '');
+      upsertHistory({
+        id: state.activeHistoryId, fileName: state.fileName, type: 'order',
+        updatedAt: Date.now(), payload: PZE.serializeDoc(editorDoc),
+      });
     } catch (e) { /* не критично */ }
-  }
-  function loadDraft() {
-    try {
-      const json = localStorage.getItem('pz-editor-doc');
-      if (!json) return null;
-      state.fileName = localStorage.getItem('pz-editor-filename') || '';
-      return PZE.deserializeDoc(json);
-    } catch (e) { return null; }
-  }
-  function clearDraftStorage() {
-    try { localStorage.removeItem('pz-editor-doc'); localStorage.removeItem('pz-editor-filename'); } catch (e) { /* не критично */ }
   }
 
   function onDocChanged() {
@@ -2280,7 +2346,10 @@ PZE.deserializeDoc = function (json) {
     // ручной раскладке, самые высокие/приоритетные артикулы должны быть видны первыми.
     const poolSorted = doc.pool.slice().sort((a, b) => doc.rows[b].stackHeightCm - doc.rows[a].stackHeightCm);
     poolSorted.forEach((id) => poolChips.appendChild(chipEl(doc, id)));
-    wireDropZone(poolChips, { where: 'pool' });
+    // Подсветку и приём drop вешаем на весь блок «Не распределено» (не на тесно
+    // обёрнутый вокруг чипов ряд) — иначе рамка при наведении подгоняется под
+    // содержимое, а не под размер самого окна, что выглядит как баг.
+    wireDropZone($('#editorPoolBox'), { where: 'pool' });
 
     const palletsContainer = $('#editorPallets');
     palletsContainer.innerHTML = '';
@@ -2317,7 +2386,9 @@ PZE.deserializeDoc = function (json) {
           ? PZ.arcOrderPreview(laneIds.map((id) => doc.rows[id]).filter(Boolean)).map((a) => a.id)
           : laneIds;
         displayOrder.forEach((id) => row.appendChild(chipEl(doc, id)));
-        wireDropZone(row, { where: 'lane', pi, li });
+        // Так же, как и с пулом — подсветку вешаем на всю шеренгу целиком, а не на
+        // тесную обёртку вокруг карточек.
+        wireDropZone(lane, { where: 'lane', pi, li });
         lane.appendChild(row);
         lanes.appendChild(lane);
       });
@@ -2416,9 +2487,11 @@ PZE.deserializeDoc = function (json) {
   });
 
   $('#clearDraftBtn').addEventListener('click', () => {
-    if (!confirm('Стереть текущий черновик редактора? Действие необратимо.')) return;
+    if (!confirm('Стереть текущий черновик редактора? Он также будет удалён из истории файлов. Действие необратимо.')) return;
+    if (state.activeHistoryId) removeHistoryEntry(state.activeHistoryId);
     editorDoc = null;
-    clearDraftStorage();
+    state.activeHistoryId = null;
+    setActiveHistoryId(null);
     hideAllPanels();
     emptyState.hidden = false;
   });
@@ -2452,11 +2525,18 @@ PZE.deserializeDoc = function (json) {
       if (PZ.looksLikeLayout(rows)) {
         editorDoc = null;
         state.blocks = PZ.parseBlocks(rows);
+        const id = genHistoryId();
+        state.activeHistoryId = id;
+        setActiveHistoryId(id);
+        upsertHistory({ id, fileName: file.name, type: 'layout', updatedAt: Date.now(), payload: serializeLayoutBlocks(state.blocks) });
         rebuildAndRender();
         return;
       }
       if (PZ.looksLikeOrder(rows)) {
         const lines = PZ.parseOrder(rows);
+        const id = genHistoryId();
+        state.activeHistoryId = id;
+        setActiveHistoryId(id);
         await startEditor(lines);
         return;
       }
@@ -2510,19 +2590,88 @@ PZE.deserializeDoc = function (json) {
   $('#helpBtn').addEventListener('click', () => { helpModal.hidden = false; });
   $('#helpClose').addEventListener('click', () => { helpModal.hidden = true; });
   helpModal.addEventListener('click', (e) => { if (e.target === helpModal) helpModal.hidden = true; });
+  // ---- История файлов ----
+  function openHistoryEntry(entry) {
+    showError('');
+    state.fileName = entry.fileName;
+    state.activeHistoryId = entry.id;
+    setActiveHistoryId(entry.id);
+    if (entry.type === 'order') {
+      try {
+        editorDoc = PZE.deserializeDoc(entry.payload);
+      } catch (e) {
+        showError('Не удалось открыть этот черновик: ' + e.message);
+        return;
+      }
+      previewCache = {};
+      showEditor();
+      renderEditor();
+    } else {
+      editorDoc = null;
+      try {
+        state.blocks = deserializeLayoutBlocks(entry.payload);
+      } catch (e) {
+        showError('Не удалось открыть этот файл: ' + e.message);
+        return;
+      }
+      rebuildAndRender();
+    }
+  }
+
+  const historyModal = $('#historyModal');
+  function renderHistoryList() {
+    const container = $('#historyList');
+    container.innerHTML = '';
+    const list = loadHistory();
+    if (list.length === 0) {
+      container.appendChild(el('div', 'historyEmpty', 'Пока пусто — здесь появятся файлы, которые вы загружали.'));
+      return;
+    }
+    list.forEach((entry) => {
+      const row = el('div', 'historyRow');
+      const info = el('div', 'historyInfo');
+      info.appendChild(el('div', 'historyName', entry.fileName || '(без имени)'));
+      info.appendChild(el('div', 'historyMeta', `${entry.type === 'order' ? 'Заказ (редактор)' : 'Готовая раскладка'} · ${formatHistoryDate(entry.updatedAt)}`));
+      row.appendChild(info);
+
+      const actions = el('div', 'historyActions');
+      const openBtn = el('button', 'smallBtn', 'Открыть'); openBtn.type = 'button';
+      openBtn.addEventListener('click', () => { openHistoryEntry(entry); historyModal.hidden = true; });
+      actions.appendChild(openBtn);
+      const delBtn = el('button', 'smallBtn', '× Удалить'); delBtn.type = 'button';
+      delBtn.addEventListener('click', () => {
+        if (!confirm(`Удалить «${entry.fileName}» из истории?`)) return;
+        removeHistoryEntry(entry.id);
+        if (state.activeHistoryId === entry.id) { state.activeHistoryId = null; setActiveHistoryId(null); }
+        renderHistoryList();
+      });
+      actions.appendChild(delBtn);
+      row.appendChild(actions);
+
+      container.appendChild(row);
+    });
+  }
+  $('#historyBtn').addEventListener('click', () => { renderHistoryList(); historyModal.hidden = false; });
+  $('#historyClose').addEventListener('click', () => { historyModal.hidden = true; });
+  historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.hidden = true; });
+  $('#clearHistoryBtn').addEventListener('click', () => {
+    if (!confirm('Очистить всю историю файлов? Действие необратимо.')) return;
+    saveHistoryList([]);
+    renderHistoryList();
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (!helpModal.hidden) helpModal.hidden = true;
+    if (!historyModal.hidden) historyModal.hidden = true;
     if (!lightbox.hidden) lightbox.hidden = true;
   });
 
-  // ---- Восстановление черновика редактора, если он остался с прошлого раза ----
-  const restored = loadDraft();
-  if (restored) {
-    editorDoc = restored;
-    previewCache = {};
-    showEditor();
-    renderEditor();
+  // ---- Восстановление активного файла, если он остался с прошлого раза ----
+  const activeHistoryId = getActiveHistoryId();
+  if (activeHistoryId) {
+    const entry = loadHistory().find((e) => e.id === activeHistoryId);
+    if (entry) openHistoryEntry(entry);
   }
 })();
 </script>
