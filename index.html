@@ -81,6 +81,8 @@
     font-weight: 700; font-size: 13px; color: var(--text); cursor: pointer;
   }
   .ghostBtn:hover { background: var(--hover); }
+  .ghostBtn:disabled { opacity: 0.45; cursor: default; }
+  .ghostBtn:disabled:hover { background: transparent; }
 
   .settingsPanel {
     margin-top: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
@@ -275,6 +277,14 @@
     <div class="resultsHeader">
       <div class="summaryLine" id="editorSummary"></div>
       <div class="topActions">
+        <button type="button" class="ghostBtn" id="undoBtn" title="Отменить последнее действие (Ctrl+Z)" disabled>↶ Отменить</button>
+        <label class="orderModeToggle" title="Куда девать освободившиеся/недостающие короба при изменении количества на карточке вручную.">
+          Излишек →
+          <select id="qtyOverflowMode" class="chipMove" style="width:auto;">
+            <option value="pool">в остаток</option>
+            <option value="lane">в другую шеренгу</option>
+          </select>
+        </label>
         <label class="orderModeToggle" title="Автосортировка расставляет короба в шеренге по высоте (короче к краю, выше к центру). В ручном режиме порядок внутри шеренги задаётся перетаскиванием.">
           <input type="checkbox" id="autoSortToggle" checked />
           <span id="autoSortLabel">Порядок в шеренге: авто</span>
@@ -306,7 +316,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.3.2</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.4.0</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -367,6 +377,8 @@
         <li><b>⇄ Д/В</b> — поменять местами длину и высоту короба, если так он лучше ложится.</li>
         <li>Габариты, вес и количество на карточке можно просто вписать вручную поверх подтянутых из справочника.</li>
         <li><b>Порядок в шеренге: авто/вручную</b> — по умолчанию короба внутри шеренги сами расставляются по высоте столбика (короче к краю, выше к центру). Переключив в «вручную», можно перетащить карточку на другую внутри шеренги, чтобы вставить её до/после — тогда порядок задаёте сами.</li>
+        <li><b>Отменить (Ctrl+Z)</b> — откатывает последнее действие в редакторе (перенос, разбивку, правку поля и т.д.), можно нажимать много раз подряд.</li>
+        <li>Количество коробов по артикулу нельзя увеличить сверх того, что было в заказе — если вписать в поле количества число больше текущего, недостающее заберётся из другой строки того же артикула. Переключатель <b>«Излишек →»</b> решает, откуда брать при увеличении и куда девать при уменьшении: в нераспределённый остаток или в другую шеренгу, где этот артикул уже есть.</li>
         <li>Черновик автоматически сохраняется в этом браузере — обновление страницы работу не сотрёт. «Сбросить изменения» возвращает раскладку к тому виду, в котором она была сразу после загрузки файла (сам файл при этом остаётся в истории).</li>
         <li>Кнопка <b>«История файлов»</b> над областью загрузки — все файлы, которые вы открывали в этом браузере (и заказы, и готовые раскладки), с возможностью вернуться к любому из них в один клик.</li>
         <li>«Готово → карточки» строит финальные карточки паллет из текущей раскладки — дальше с ними можно работать как обычно (PDF/PNG).</li>
@@ -1878,6 +1890,52 @@ PZE.removeRow = function (doc, id) {
   delete doc.rows[id];
 };
 
+// Прямое редактирование количества на карточке не должно менять общее число коробов
+// этого артикула по всему документу (сколько было при загрузке заказа — столько и
+// должно остаться, просто по-другому разложенное). Поэтому изменение qty одной строки
+// компенсируется за счёт другой строки ТОГО ЖЕ артикула — либо из пула («остаток»),
+// либо из другой шеренги, где этот артикул тоже есть — mode выбирает приоритет.
+// Возвращает фактически применённое значение (может быть меньше запрошенного, если
+// компенсировать увеличение больше неоткуда).
+PZE.adjustQty = function (doc, id, newQty, mode) {
+  const row = doc.rows[id];
+  if (!row) return 0;
+  newQty = Math.max(1, Math.round(newQty));
+  const delta = newQty - row.qty;
+  if (delta === 0) return row.qty;
+
+  const isInPool = (r) => doc.pool.includes(r.id);
+  const counterparts = Object.values(doc.rows).filter((r) => r.id !== id && r.article === row.article);
+  const prioritized = mode === 'lane'
+    ? [...counterparts.filter((r) => !isInPool(r)), ...counterparts.filter((r) => isInPool(r))]
+    : [...counterparts.filter((r) => isInPool(r)), ...counterparts.filter((r) => !isInPool(r))];
+
+  if (delta > 0) {
+    let need = delta;
+    for (const cp of prioritized) {
+      if (need <= 0) break;
+      const take = Math.min(cp.qty, need);
+      cp.qty -= take;
+      need -= take;
+      if (cp.qty <= 0) PZE.removeRow(doc, cp.id);
+    }
+    row.qty += (delta - need);
+  } else {
+    let target = prioritized[0];
+    if (!target) {
+      target = PZ.makeArticle({
+        article: row.article, qty: 0, lengthCm: row.lengthCm, widthCm: row.widthCm,
+        heightCm: row.heightCm, weightPerBoxKg: row.weightPerBoxKg,
+      });
+      doc.rows[target.id] = target;
+      doc.pool.push(target.id);
+    }
+    target.qty += (-delta);
+    row.qty = newQty;
+  }
+  return row.qty;
+};
+
 // Собирает doc в структуру, которую понимают уже существующие PZ.buildScene/PZR —
 // пустые шеренги допустимы (buildScene просто не даёт для них колонок), поэтому
 // лэйны НЕ фильтруются — иначе индекс шеренги (чёт/нечет = прижим сверху/снизу) съедет.
@@ -1933,6 +1991,37 @@ PZE.deserializeDoc = function (json) {
   // любое изменение подвисало на пару секунд. Теперь пересчитывается только та паллета,
   // чья подпись (состав шеренг + актуальные габариты её строк) реально изменилась.
   let previewCache = {};
+
+  // ---------- Отмена действий ----------
+  // Простой стек снимков всего документа: перед КАЖДЫМ мутирующим действием (перенос,
+  // разбивка, своп, удаление, правка полей, переключение режима) кладём сюда сериализованную
+  // копию — «Отменить» просто возвращает предыдущий снимок. Грубо по памяти, зато без риска
+  // забыть какое-то поле при откате конкретного действия.
+  let undoStack = [];
+  const UNDO_LIMIT = 50;
+  function pushUndo() {
+    if (!editorDoc) return;
+    try {
+      undoStack.push(PZE.serializeDoc(editorDoc));
+      if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+    } catch (e) { /* не критично */ }
+    updateUndoButton();
+  }
+  function resetUndo() { undoStack = []; updateUndoButton(); }
+  function undoLastAction() {
+    if (undoStack.length === 0 || !editorDoc) return;
+    const prevJson = undoStack.pop();
+    try { editorDoc = PZE.deserializeDoc(prevJson); } catch (e) { return; }
+    previewCache = {};
+    renderEditor();
+    saveDraft();
+    updateUndoButton();
+  }
+  function updateUndoButton() {
+    const btn = $('#undoBtn');
+    if (btn) btn.disabled = undoStack.length === 0;
+  }
+
   function palletSignature(doc, pi) {
     const p = doc.pallets[pi];
     const rowsPart = p.lanes.flat().map((id) => {
@@ -2241,11 +2330,20 @@ PZE.deserializeDoc = function (json) {
     dims.appendChild(wtInput); dims.appendChild(document.createTextNode(' кг'));
     chip.appendChild(dims);
 
-    qtyInput.addEventListener('change', () => { row.qty = Math.max(1, Math.round(parseFloat(qtyInput.value) || 1)); onDocChanged(); });
-    lInput.addEventListener('change', () => { row.lengthCm = parseFloat(lInput.value) || row.lengthCm; onDocChanged(); });
-    wInput.addEventListener('change', () => { row.widthCm = parseFloat(wInput.value) || row.widthCm; onDocChanged(); });
-    hInput.addEventListener('change', () => { row.heightCm = parseFloat(hInput.value) || row.heightCm; onDocChanged(); });
-    wtInput.addEventListener('change', () => { row.weightPerBoxKg = parseFloat(wtInput.value) || row.weightPerBoxKg; onDocChanged(); });
+    qtyInput.addEventListener('change', () => {
+      pushUndo();
+      const requested = Math.max(1, Math.round(parseFloat(qtyInput.value) || row.qty));
+      const mode = $('#qtyOverflowMode').value;
+      const applied = PZE.adjustQty(doc, id, requested, mode);
+      showError(applied !== requested
+        ? `Недостаточно свободных коробов «${row.article}»: увеличено только до ${applied} шт (столько же в других строках этого артикула, забрать больше неоткуда). Общее число коробов по артикулу не может превышать заказанное.`
+        : '');
+      onDocChanged();
+    });
+    lInput.addEventListener('change', () => { pushUndo(); row.lengthCm = parseFloat(lInput.value) || row.lengthCm; onDocChanged(); });
+    wInput.addEventListener('change', () => { pushUndo(); row.widthCm = parseFloat(wInput.value) || row.widthCm; onDocChanged(); });
+    hInput.addEventListener('change', () => { pushUndo(); row.heightCm = parseFloat(hInput.value) || row.heightCm; onDocChanged(); });
+    wtInput.addEventListener('change', () => { pushUndo(); row.weightPerBoxKg = parseFloat(wtInput.value) || row.weightPerBoxKg; onDocChanged(); });
 
     const actions = el('div', 'chipActions');
 
@@ -2256,12 +2354,12 @@ PZE.deserializeDoc = function (json) {
       const wanted = loc.where === 'pool' ? '{"where":"pool"}' : JSON.stringify({ where: 'lane', pi: loc.pi, li: loc.li });
       moveSelect.value = wanted;
     }
-    moveSelect.addEventListener('change', () => { PZE.moveTo(doc, id, JSON.parse(moveSelect.value)); onDocChanged(); });
+    moveSelect.addEventListener('change', () => { pushUndo(); PZE.moveTo(doc, id, JSON.parse(moveSelect.value)); onDocChanged(); });
     actions.appendChild(moveSelect);
 
     const swapBtn = el('button', 'chipBtn', '⇄ Д/В'); swapBtn.type = 'button';
     swapBtn.title = 'Поменять местами длину и высоту (если короб не помещается в этой ориентации)';
-    swapBtn.addEventListener('click', () => { PZE.swapLengthHeight(doc, id); onDocChanged(); });
+    swapBtn.addEventListener('click', () => { pushUndo(); PZE.swapLengthHeight(doc, id); onDocChanged(); });
     actions.appendChild(swapBtn);
 
     if (row.qty > 1) {
@@ -2271,7 +2369,7 @@ PZE.deserializeDoc = function (json) {
         const ans = prompt(`Сколько из ${row.qty} шт отделить в новый столбик?`, Math.floor(row.qty / 2));
         if (ans === null) return;
         const n = parseInt(ans, 10);
-        if (n && n > 0 && n < row.qty) { PZE.splitRow(doc, id, n); onDocChanged(); }
+        if (n && n > 0 && n < row.qty) { pushUndo(); PZE.splitRow(doc, id, n); onDocChanged(); }
         else if (ans.trim() !== '') alert('Число должно быть больше 0 и меньше текущего количества.');
       });
       actions.appendChild(splitBtn);
@@ -2280,7 +2378,7 @@ PZE.deserializeDoc = function (json) {
     const removeBtn = el('button', 'chipBtn', '× Удалить'); removeBtn.type = 'button';
     removeBtn.title = 'Убрать эту строку из заказа совсем';
     removeBtn.addEventListener('click', () => {
-      if (confirm(`Удалить ${row.article} (${row.qty} шт) из заказа?`)) { PZE.removeRow(doc, id); onDocChanged(); }
+      if (confirm(`Удалить ${row.article} (${row.qty} шт) из заказа?`)) { pushUndo(); PZE.removeRow(doc, id); onDocChanged(); }
     });
     actions.appendChild(removeBtn);
 
@@ -2312,6 +2410,7 @@ PZE.deserializeDoc = function (json) {
       if (!draggedId || draggedId === id || !doc.rows[draggedId]) return;
       const rect = chip.getBoundingClientRect();
       const after = (e.clientX - rect.left) > rect.width / 2;
+      pushUndo();
       PZE.moveToPosition(doc, draggedId, { pi: loc.pi, li: loc.li }, id, after);
       onDocChanged();
     });
@@ -2342,7 +2441,7 @@ PZE.deserializeDoc = function (json) {
       depth = 0;
       container.classList.remove('dragOver');
       const id = e.dataTransfer.getData('text/plain');
-      if (id && editorDoc.rows[id]) { PZE.moveTo(editorDoc, id, dest); onDocChanged(); }
+      if (id && editorDoc.rows[id]) { pushUndo(); PZE.moveTo(editorDoc, id, dest); onDocChanged(); }
     });
   }
 
@@ -2382,7 +2481,7 @@ PZE.deserializeDoc = function (json) {
       head.appendChild(el('b', null, `Паллета ${pi + 1}`));
       const removeBtn = el('button', 'smallBtn', 'Удалить паллету'); removeBtn.type = 'button';
       removeBtn.addEventListener('click', () => {
-        if (confirm('Удалить паллету? Короба вернутся в пул «не распределено».')) { PZE.removePallet(doc, pi); previewCache = {}; onDocChanged(); }
+        if (confirm('Удалить паллету? Короба вернутся в пул «не распределено».')) { pushUndo(); PZE.removePallet(doc, pi); previewCache = {}; onDocChanged(); }
       });
       head.appendChild(removeBtn);
       box.appendChild(head);
@@ -2460,6 +2559,7 @@ PZE.deserializeDoc = function (json) {
     editorDoc = PZE.createDoc(rows);
     state.initialDocPayload = PZE.serializeDoc(editorDoc);
     previewCache = {};
+    resetUndo();
     showEditor();
     const missingBox = $('#missingArticlesBox');
     if (missing.length) {
@@ -2471,12 +2571,13 @@ PZE.deserializeDoc = function (json) {
     onDocChanged();
   }
 
-  $('#addPalletBtn').addEventListener('click', () => { PZE.addPallet(editorDoc); previewCache = {}; onDocChanged(); });
+  $('#addPalletBtn').addEventListener('click', () => { pushUndo(); PZE.addPallet(editorDoc); previewCache = {}; onDocChanged(); });
 
   const autoSortToggle = $('#autoSortToggle');
   const autoSortLabel = $('#autoSortLabel');
   autoSortToggle.addEventListener('change', () => {
     if (!editorDoc) return;
+    pushUndo();
     if (!autoSortToggle.checked) {
       // Переходим в ручной режим — фиксируем в массивах шеренг текущий авто-порядок
       // (arc-order), чтобы при выключении автосортировки ничего не «прыгнуло».
@@ -2509,6 +2610,7 @@ PZE.deserializeDoc = function (json) {
       return;
     }
     if (!confirm('Отменить все изменения и вернуться к состоянию сразу после загрузки этого файла? Файл останется в истории.')) return;
+    pushUndo();
     try {
       editorDoc = PZE.deserializeDoc(state.initialDocPayload);
     } catch (e) {
@@ -2629,6 +2731,7 @@ PZE.deserializeDoc = function (json) {
       }
       state.initialDocPayload = entry.initialPayload || null;
       previewCache = {};
+      resetUndo();
       showEditor();
       renderEditor();
     } else {
@@ -2685,11 +2788,22 @@ PZE.deserializeDoc = function (json) {
     renderHistoryList();
   });
 
+  $('#undoBtn').addEventListener('click', () => undoLastAction());
+
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    if (!helpModal.hidden) helpModal.hidden = true;
-    if (!historyModal.hidden) historyModal.hidden = true;
-    if (!lightbox.hidden) lightbox.hidden = true;
+    if (e.key === 'Escape') {
+      if (!helpModal.hidden) helpModal.hidden = true;
+      if (!historyModal.hidden) historyModal.hidden = true;
+      if (!lightbox.hidden) lightbox.hidden = true;
+      return;
+    }
+    // Ctrl/Cmd+Z — не перехватываем, если фокус в текстовом поле (там должен работать
+    // родной undo самого поля, а не откат всего документа).
+    const isUndoCombo = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z';
+    if (!isUndoCombo) return;
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (!editorSection.hidden) { e.preventDefault(); undoLastAction(); }
   });
 
   // ---- Восстановление активного файла, если он остался с прошлого раза ----
