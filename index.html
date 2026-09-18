@@ -274,7 +274,7 @@
         </label>
         <button type="button" class="ghostBtn" id="addPalletBtn">+ Паллета</button>
         <button type="button" class="ghostBtn" id="refreshLookupBtn">Обновить справочник</button>
-        <button type="button" class="ghostBtn" id="clearDraftBtn">Начать заново</button>
+        <button type="button" class="ghostBtn" id="clearDraftBtn">Сбросить изменения</button>
         <button type="button" class="primaryBtn" id="finishEditingBtn">Готово → карточки</button>
       </div>
     </div>
@@ -299,7 +299,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.3.0</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.3.1</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -360,7 +360,7 @@
         <li><b>⇄ Д/В</b> — поменять местами длину и высоту короба, если так он лучше ложится.</li>
         <li>Габариты, вес и количество на карточке можно просто вписать вручную поверх подтянутых из справочника.</li>
         <li><b>Порядок в шеренге: авто/вручную</b> — по умолчанию короба внутри шеренги сами расставляются по высоте столбика (короче к краю, выше к центру). Переключив в «вручную», можно перетащить карточку на другую внутри шеренги, чтобы вставить её до/после — тогда порядок задаёте сами.</li>
-        <li>Черновик автоматически сохраняется в этом браузере — обновление страницы работу не сотрёт. «Начать заново» стирает черновик безвозвратно.</li>
+        <li>Черновик автоматически сохраняется в этом браузере — обновление страницы работу не сотрёт. «Сбросить изменения» возвращает раскладку к тому виду, в котором она была сразу после загрузки файла (сам файл при этом остаётся в истории).</li>
         <li>Кнопка <b>«История файлов»</b> над областью загрузки — все файлы, которые вы открывали в этом браузере (и заказы, и готовые раскладки), с возможностью вернуться к любому из них в один клик.</li>
         <li>«Готово → карточки» строит финальные карточки паллет из текущей раскладки — дальше с ними можно работать как обычно (PDF/PNG).</li>
       </ul>
@@ -1917,6 +1917,7 @@ PZE.deserializeDoc = function (json) {
     fileName: '',
     lookupMap: null,
     activeHistoryId: null,
+    initialDocPayload: null, // сериализованное состояние сразу после загрузки заказа — для «Сбросить изменения»
   };
   let editorDoc = null;
   // Кэш превью по индексу паллеты — рендер одной карточки (2 ракурса + вид сверху +
@@ -2159,6 +2160,7 @@ PZE.deserializeDoc = function (json) {
       upsertHistory({
         id: state.activeHistoryId, fileName: state.fileName, type: 'order',
         updatedAt: Date.now(), payload: PZE.serializeDoc(editorDoc),
+        initialPayload: state.initialDocPayload,
       });
     } catch (e) { /* не критично */ }
   }
@@ -2443,6 +2445,7 @@ PZE.deserializeDoc = function (json) {
     const { rows, missing } = PZ.mergeOrderWithLookup(orderLines, lookup);
     if (rows.length === 0) throw new Error('Ни один артикул из заказа не найден в справочнике — нечего раскладывать.');
     editorDoc = PZE.createDoc(rows);
+    state.initialDocPayload = PZE.serializeDoc(editorDoc);
     previewCache = {};
     showEditor();
     const missingBox = $('#missingArticlesBox');
@@ -2487,13 +2490,21 @@ PZE.deserializeDoc = function (json) {
   });
 
   $('#clearDraftBtn').addEventListener('click', () => {
-    if (!confirm('Стереть текущий черновик редактора? Он также будет удалён из истории файлов. Действие необратимо.')) return;
-    if (state.activeHistoryId) removeHistoryEntry(state.activeHistoryId);
-    editorDoc = null;
-    state.activeHistoryId = null;
-    setActiveHistoryId(null);
-    hideAllPanels();
-    emptyState.hidden = false;
+    if (!editorDoc) return;
+    if (!state.initialDocPayload) {
+      showError('Не удалось сбросить: исходное состояние этого файла не сохранено (черновик из старой версии приложения). Загрузите файл заново.');
+      return;
+    }
+    if (!confirm('Отменить все изменения и вернуться к состоянию сразу после загрузки этого файла? Файл останется в истории.')) return;
+    try {
+      editorDoc = PZE.deserializeDoc(state.initialDocPayload);
+    } catch (e) {
+      showError('Не удалось сбросить: ' + e.message);
+      return;
+    }
+    previewCache = {};
+    onDocChanged();
+    showError('');
   });
 
   $('#finishEditingBtn').addEventListener('click', () => {
@@ -2603,6 +2614,7 @@ PZE.deserializeDoc = function (json) {
         showError('Не удалось открыть этот черновик: ' + e.message);
         return;
       }
+      state.initialDocPayload = entry.initialPayload || null;
       previewCache = {};
       showEditor();
       renderEditor();
