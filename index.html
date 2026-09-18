@@ -124,10 +124,17 @@
 
   .chip {
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
-    display: flex; flex-direction: column; gap: 6px; width: 212px; cursor: grab;
+    display: flex; flex-direction: column; gap: 6px; width: 212px;
   }
   .chip.dragging { opacity: 0.4; }
-  .chipTitle { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; gap: 6px; }
+  .chipTitle { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .chipArticle { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chipHandle {
+    cursor: grab; color: var(--muted); font-weight: 900; font-size: 15px; line-height: 1;
+    padding: 2px 4px; margin: -2px -4px -2px -6px; border-radius: 4px; user-select: none; flex-shrink: 0;
+  }
+  .chipHandle:hover { background: var(--hover); color: var(--text); }
+  .chipHandle:active { cursor: grabbing; }
   .chipTitle .chipQty { color: var(--muted); font-weight: 600; }
   .chipDims { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; flex-wrap: wrap; }
   .chipDims input {
@@ -299,7 +306,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.3.1</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.3.2</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -2199,11 +2206,20 @@ PZE.deserializeDoc = function (json) {
   function chipEl(doc, id) {
     const row = doc.rows[id];
     const chip = el('div', 'chip');
-    chip.draggable = true;
     chip.dataset.id = id;
 
     const title = el('div', 'chipTitle');
-    title.appendChild(el('span', null, row.article));
+    // Тянуть можно только за эту ручку, не за всю карточку целиком: карточка плотно
+    // набита инпутами/кнопками, и клик по ним внутри draggable-контейнера перехватывает
+    // mousedown раньше, чем браузер успевает распознать начало перетаскивания — drag
+    // просто не стартует. Отдельная маленькая ручка с draggable=true снимает конфликт.
+    const handle = el('span', 'chipHandle', '⠿');
+    handle.draggable = true;
+    handle.title = 'Потяните, чтобы перенести карточку';
+    handle.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', id); chip.classList.add('dragging'); });
+    handle.addEventListener('dragend', () => chip.classList.remove('dragging'));
+    title.appendChild(handle);
+    title.appendChild(el('span', 'chipArticle', row.article));
     title.appendChild(el('span', 'chipQty', `H:${Math.round(row.stackHeightCm)}`));
     chip.appendChild(title);
 
@@ -2269,9 +2285,6 @@ PZE.deserializeDoc = function (json) {
     actions.appendChild(removeBtn);
 
     chip.appendChild(actions);
-
-    chip.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', id); chip.classList.add('dragging'); });
-    chip.addEventListener('dragend', () => chip.classList.remove('dragging'));
 
     // Ручной режим: наведение на конкретную карточку внутри шеренги позволяет вставить
     // перетаскиваемую карточку до/после неё (какая половина карточки под курсором).
