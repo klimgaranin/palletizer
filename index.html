@@ -123,13 +123,16 @@
   }
   .editorPoolTitle { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
   /* Список строк вместо сетки квадратных карточек — компактнее и легче сканировать глазами
-     на большом заказе (десятки позиций), особенно с полем быстрого назначения паллеты. */
-  .chipRow { display: flex; flex-direction: column; gap: 4px; min-height: 8px; }
+     на большом заказе (десятки позиций), особенно с полем быстрого назначения паллеты.
+     Каждая строка — строго один уровень (без переноса на 2 строки): если не влезает по
+     ширине, весь список едет вбок одним общим горизонтальным скроллом, а не «прыгает»
+     высотой от строки к строке. */
+  .chipRow { display: flex; flex-direction: column; gap: 4px; min-height: 8px; overflow-x: auto; }
   .editorPool.dragOver, .editorLane.dragOver { outline: 2px dashed var(--accent); outline-offset: -2px; }
 
   .chip {
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; width: max-content; min-width: 100%;
   }
   .chip.dragging { opacity: 0.4; }
   .chipArticle { flex: 0 0 auto; min-width: 76px; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -332,7 +335,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.5.0</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.5.1</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -2110,6 +2113,25 @@ PZE.deserializeDoc = function (json) {
 
   const $ = (sel) => document.querySelector(sel);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  // Единые SVG-иконки для строки редактора вместо текстовых символов ⇄/✂/× — те рендерятся
+  // системным шрифтом каждый на свой лад (разный размер, разная оптическая насыщенность),
+  // из-за чего кнопки визуально «гуляли». SVG одного размера и толщины линии — всегда
+  // одинаковы, независимо от системного набора эмодзи-шрифтов.
+  const ICONS = {
+    grip: '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="8" cy="6" r="1.7"/><circle cx="16" cy="6" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="18" r="1.7"/><circle cx="16" cy="18" r="1.7"/></svg>',
+    swap: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+    split: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><line x1="20" y1="4" x2="8.5" y2="15.5"/><line x1="14.5" y1="14.5" x2="20" y2="20"/><line x1="8.5" y1="8.5" x2="12" y2="12"/></svg>',
+    remove: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>',
+  };
+  function iconBtn(cls, iconName, title) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    b.innerHTML = ICONS[iconName];
+    b.title = title;
+    return b;
+  }
   const formatDateRu = (isoDate) => {
     if (!isoDate) return '';
     const [y, m, d] = isoDate.split('-');
@@ -2340,11 +2362,19 @@ PZE.deserializeDoc = function (json) {
     const chip = el('div', 'chip');
     chip.dataset.id = id;
 
+    // Красим строку в тот же цвет, что артикул получит на самой паллете (та же функция
+    // хэширования, что и в рендере) — так проще визуально сопоставить строку редактора
+    // с конкретным цветным коробом на карточке, не вчитываясь в код артикула.
+    const rowColor = PZ.colorForArticle(row.article);
+    chip.style.borderLeft = `5px solid ${PZ.css(rowColor)}`;
+    chip.style.background = `rgba(${rowColor.r}, ${rowColor.g}, ${rowColor.b}, 0.14)`;
+
     // Тянуть можно только за эту ручку, не за всю строку целиком: строка плотно набита
     // инпутами/кнопками, и клик по ним внутри draggable-контейнера перехватывает
     // mousedown раньше, чем браузер успевает распознать начало перетаскивания — drag
     // просто не стартует. Отдельная маленькая ручка с draggable=true снимает конфликт.
-    const handle = el('span', 'chipHandle', '⠿');
+    const handle = el('span', 'chipHandle');
+    handle.innerHTML = ICONS.grip;
     handle.draggable = true;
     handle.title = 'Потяните, чтобы перенести строку';
     handle.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', id); chip.classList.add('dragging'); });
@@ -2428,14 +2458,12 @@ PZE.deserializeDoc = function (json) {
 
     const actions = el('span', 'chipActionsField');
 
-    const swapBtn = el('button', 'chipBtn', '⇄'); swapBtn.type = 'button';
-    swapBtn.title = 'Поменять местами длину и высоту (если короб не помещается в этой ориентации)';
+    const swapBtn = iconBtn('chipBtn', 'swap', 'Поменять местами длину и высоту (если короб не помещается в этой ориентации)');
     swapBtn.addEventListener('click', () => { pushUndo(); PZE.swapLengthHeight(doc, id); onDocChanged(); });
     actions.appendChild(swapBtn);
 
     if (row.qty > 1) {
-      const splitBtn = el('button', 'chipBtn', '✂'); splitBtn.type = 'button';
-      splitBtn.title = 'Разделить: отделить часть количества в новую строку';
+      const splitBtn = iconBtn('chipBtn', 'split', 'Разделить: отделить часть количества в новую строку');
       splitBtn.addEventListener('click', () => {
         const ans = prompt(`Сколько из ${row.qty} шт отделить в новую строку?`, Math.floor(row.qty / 2));
         if (ans === null) return;
@@ -2446,8 +2474,7 @@ PZE.deserializeDoc = function (json) {
       actions.appendChild(splitBtn);
     }
 
-    const removeBtn = el('button', 'chipBtn chipBtnDanger', '×'); removeBtn.type = 'button';
-    removeBtn.title = 'Удалить: убрать эту строку из заказа совсем';
+    const removeBtn = iconBtn('chipBtn chipBtnDanger', 'remove', 'Удалить: убрать эту строку из заказа совсем');
     removeBtn.addEventListener('click', () => {
       if (confirm(`Удалить ${row.article} (${row.qty} шт) из заказа?`)) { pushUndo(); PZE.removeRow(doc, id); onDocChanged(); }
     });
@@ -2867,12 +2894,12 @@ PZE.deserializeDoc = function (json) {
       if (!lightbox.hidden) lightbox.hidden = true;
       return;
     }
-    // Ctrl/Cmd+Z — не перехватываем, если фокус в текстовом поле (там должен работать
-    // родной undo самого поля, а не откат всего документа).
+    // Ctrl/Cmd+Z — всегда откатывает последнее действие редактора, даже если фокус
+    // сейчас в одном из числовых полей строки (а он почти всегда там и есть, поля —
+    // это большая часть интерфейса редактора; блокировать по фокусу на input/select
+    // означало на практике блокировать почти всегда).
     const isUndoCombo = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z';
     if (!isUndoCombo) return;
-    const tag = document.activeElement && document.activeElement.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (!editorSection.hidden) { e.preventDefault(); undoLastAction(); }
   });
 
