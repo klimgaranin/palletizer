@@ -123,47 +123,66 @@
   }
   .editorPoolTitle { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
   /* Список строк вместо сетки квадратных карточек — компактнее и легче сканировать глазами
-     на большом заказе (десятки позиций), особенно с полем быстрого назначения паллеты.
-     Каждая строка — строго один уровень (без переноса на 2 строки): если не влезает по
-     ширине, весь список едет вбок одним общим горизонтальным скроллом, а не «прыгает»
-     высотой от строки к строке. */
-  .chipRow { display: flex; flex-direction: column; gap: 4px; min-height: 8px; overflow-x: auto; }
+     на большом заказе (десятки позиций). Строка и строка заголовков — CSS grid с ОДНИМИ и
+     теми же колонками (chipCols), поэтому значения реально выстраиваются по столбцам, а не
+     просто визуально похожи. Каждая строка — строго один уровень (без переноса на 2 строки):
+     если не влезает по ширине, весь список едет вбок горизонтальным скроллом целиком. */
+  .chipRow { display: flex; flex-direction: column; gap: 3px; min-height: 8px; overflow-x: auto; }
   .editorPool.dragOver, .editorLane.dragOver { outline: 2px dashed var(--accent); outline-offset: -2px; }
 
+  .chipHeaderRow {
+    display: grid; grid-template-columns: 18px 78px 46px 54px 108px 52px 84px;
+    align-items: center; gap: 6px; padding: 0 8px 6px; min-width: max-content;
+    font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .chipHeaderRow > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chipHeaderRow > span:not(:first-child) { text-align: center; }
+
   .chip {
-    background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
-    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; width: max-content; min-width: 100%;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px;
+    display: grid; grid-template-columns: 18px 78px 46px 54px 108px 52px 84px;
+    align-items: center; gap: 6px; min-width: max-content;
   }
   .chip.dragging { opacity: 0.4; }
-  .chipArticle { flex: 0 0 auto; min-width: 76px; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chipHandle {
-    cursor: grab; color: var(--muted); font-weight: 900; font-size: 16px; line-height: 1;
-    padding: 2px 4px; border-radius: 4px; user-select: none; flex-shrink: 0;
+  .chipArticle {
+    font-size: 12px; font-weight: 700; line-height: 1; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; text-align: center;
   }
-  .chipHandle:hover { background: var(--hover); color: var(--text); }
+  .chipHandle {
+    cursor: grab; color: var(--muted); line-height: 1; user-select: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chipHandle:hover { color: var(--text); }
   .chipHandle:active { cursor: grabbing; }
   /* Высота столбика — главный ориентир при ручной раскладке, поэтому не мелкая серая
      подпись где-то сбоку, а заметный цветной значок, который сразу бросается в глаза. */
   .chipHeight {
-    flex: 0 0 auto; background: var(--accent); color: #fff; font-weight: 800; font-size: 13px;
-    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+    background: var(--accent); color: #fff; font-weight: 800; font-size: 12px; line-height: 1;
+    padding: 4px 0; border-radius: 999px; white-space: nowrap; text-align: center;
   }
-  .chipField { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; flex: 0 0 auto; white-space: nowrap; }
+  .chipField {
+    display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 11px;
+    line-height: 1; color: var(--muted); font-weight: 600; white-space: nowrap;
+  }
+  /* Без стрелочек-степперов: числа тут не крутят кликами, а вписывают руками — стрелки
+     только отъедали ширину поля без реальной пользы. */
   .chipField input {
-    font-size: 11px; font-weight: 700; padding: 3px 4px; border: 1px solid var(--border);
+    font-size: 11px; font-weight: 700; line-height: 1; padding: 4px 2px; border: 1px solid var(--border);
     border-radius: 4px; background: var(--input-bg); color: var(--text); text-align: center;
+    -moz-appearance: textfield;
   }
-  .chipQtyInput { width: 44px !important; }
-  .dimL, .dimW, .dimH { width: 42px !important; }
-  .dimWt { width: 56px !important; }
-  .chipDimsField { gap: 2px; }
+  .chipField input::-webkit-outer-spin-button,
+  .chipField input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .chipQtyInput { width: 28px !important; }
+  .dimL, .dimW, .dimH { width: 26px !important; }
+  .chipDimsField { gap: 1px; }
   .chipPositionField { font-weight: 700; }
-  .chipPositionField input { width: 36px !important; }
+  .chipPositionField input { width: 22px !important; }
   .posPallet { color: var(--accent) !important; }
-  .chipActionsField { display: flex; gap: 3px; flex: 0 0 auto; margin-left: auto; }
+  .chipActionsField { display: flex; align-items: center; justify-content: center; gap: 3px; }
   .chipBtn {
     border: 1px solid var(--border); background: var(--card-bg); color: var(--text); border-radius: 6px;
-    width: 26px; height: 26px; font-size: 13px; font-weight: 700; cursor: pointer; padding: 0;
+    width: 24px; height: 24px; cursor: pointer; padding: 0;
     display: inline-flex; align-items: center; justify-content: center;
   }
   .chipBtn:hover { background: var(--hover); }
@@ -315,6 +334,16 @@
     </div>
     <div class="errorBox" id="missingArticlesBox" hidden></div>
 
+    <div class="chipHeaderRow">
+      <span></span>
+      <span>Артикул</span>
+      <span title="Высота столбика">H</span>
+      <span>Кол-во</span>
+      <span>Д×Ш×В, см</span>
+      <span title="Паллета / Шеренга">П/Ш</span>
+      <span>Действия</span>
+    </div>
+
     <div class="editorPool" id="editorPoolBox">
       <div class="editorPoolTitle">Не распределено</div>
       <div class="chipRow" id="poolChips"></div>
@@ -335,7 +364,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.5.1</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.6.0</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -395,7 +424,7 @@
         <li><b>✂</b> — разделить: отделить часть количества в отдельную строку (например, часть коробов на одну паллету, часть на другую).</li>
         <li><b>⇄</b> — поменять местами длину и высоту короба, если так он лучше ложится.</li>
         <li><b>×</b> — удалить строку из заказа совсем.</li>
-        <li>Габариты, вес и количество на строке можно просто вписать вручную поверх подтянутых из справочника.</li>
+        <li>Габариты и количество на строке можно просто вписать вручную поверх подтянутых из справочника (без стрелочек — только вручную). Вес в редакторе не показывается — для раскладки он не нужен, но по-прежнему считается внутри и попадает в Excel-выгрузку для совместимости с готовыми раскладками.</li>
         <li><b>Порядок в шеренге: авто/вручную</b> — по умолчанию короба внутри шеренги сами расставляются по высоте столбика (короче к краю, выше к центру). Переключив в «вручную», можно перетащить строку на другую внутри шеренги (за ручку «⠿»), чтобы вставить её до/после — тогда порядок задаёте сами.</li>
         <li><b>Отменить (Ctrl+Z)</b> — откатывает последнее действие в редакторе (перенос, разбивку, правку поля и т.д.), можно нажимать много раз подряд.</li>
         <li>Количество коробов по артикулу нельзя увеличить сверх того, что было в заказе — если вписать в поле количества число больше текущего, недостающее заберётся из другой строки того же артикула. Переключатель <b>«Излишек →»</b> решает, откуда брать при увеличении и куда девать при уменьшении: в нераспределённый остаток или в другую шеренгу, где этот артикул уже есть.</li>
@@ -1757,15 +1786,13 @@ function drawHeader(ctx, pallet, scene, shipment) {
   ctx.fillText(`Паллета ${pallet.index + 1}`, Margin, 44);
 
   const maxH = scene.columns.length > 0 ? Math.max(...scene.columns.map(c => c.article.stackHeightCm)) : 0;
-  const totalWeight = scene.columns.reduce((s, c) => s + c.article.stackWeightKg, 0);
   const laneLengths = {};
   for (const c of scene.columns) laneLengths[c.lane] = (laneLengths[c.lane] || 0) + c.lengthCm;
   const lanesText = Object.keys(laneLengths).sort((a, b) => a - b)
     .map(k => `шеренга ${k}: ${Math.round(laneLengths[k])} см`).join('   ');
 
   ctx.font = PZR.font('bold', 17); ctx.fillStyle = '#44464A';
-  const summary = `Столбиков: ${scene.columns.length}   ·   макс. высота: ${Math.round(maxH)} см   ·   ` +
-    `вес товара: ${totalWeight.toFixed(1).replace(/\.0$/, '')} кг   ·   ${lanesText}`;
+  const summary = `Столбиков: ${scene.columns.length}   ·   макс. высота: ${Math.round(maxH)} см   ·   ${lanesText}`;
   ctx.fillText(summary, Margin, 72);
 
   const fieldsY = 106;
@@ -1801,12 +1828,11 @@ function drawComposition(ctx, r, scene) {
 
   for (let col = 0; col < CompositionCols; col++) {
     const colX = r.left + col * colW;
-    const swatchX = colX, articleX = swatchX + 22, qtyX = colX + colW * 0.62, weightX = colX + colW * 0.8;
+    const swatchX = colX, articleX = swatchX + 22, qtyX = colX + colW * 0.7;
 
     ctx.font = headFont; ctx.fillStyle = '#8A8C90';
     ctx.fillText('Артикул', articleX, startY - 6);
     ctx.fillText('Кол-во', qtyX, startY - 6);
-    ctx.fillText('Вес, кг', weightX, startY - 6);
 
     for (let row = 0; row < rows; row++) {
       const idx = col * rows + row;
@@ -1824,7 +1850,6 @@ function drawComposition(ctx, r, scene) {
       ctx.font = rowFont; ctx.fillStyle = '#202022';
       ctx.fillText(c.article.article, articleX, y);
       ctx.fillText(`${c.article.qty} шт`, qtyX, y);
-      ctx.fillText(c.article.stackWeightKg.toFixed(1).replace(/\.0$/, ''), weightX, y);
     }
   }
 }
@@ -2406,11 +2431,6 @@ PZE.deserializeDoc = function (json) {
     dimsField.appendChild(hInput); dimsField.appendChild(document.createTextNode(' см'));
     chip.appendChild(dimsField);
 
-    const wtField = el('span', 'chipField');
-    const wtInput = mkNum('dimWt', round2(row.weightPerBoxKg), 0.01, 0.01);
-    wtField.appendChild(wtInput); wtField.appendChild(document.createTextNode(' кг'));
-    chip.appendChild(wtField);
-
     qtyInput.addEventListener('change', () => {
       pushUndo();
       const requested = Math.max(1, Math.round(parseFloat(qtyInput.value) || row.qty));
@@ -2424,7 +2444,6 @@ PZE.deserializeDoc = function (json) {
     lInput.addEventListener('change', () => { pushUndo(); row.lengthCm = parseFloat(lInput.value) || row.lengthCm; onDocChanged(); });
     wInput.addEventListener('change', () => { pushUndo(); row.widthCm = parseFloat(wInput.value) || row.widthCm; onDocChanged(); });
     hInput.addEventListener('change', () => { pushUndo(); row.heightCm = parseFloat(hInput.value) || row.heightCm; onDocChanged(); });
-    wtInput.addEventListener('change', () => { pushUndo(); row.weightPerBoxKg = parseFloat(wtInput.value) || row.weightPerBoxKg; onDocChanged(); });
 
     // Быстрое назначение места: «Паллета / Шеренга» вместо выпадающего списка.
     const posField = el('span', 'chipField chipPositionField');
@@ -2516,7 +2535,6 @@ PZE.deserializeDoc = function (json) {
     return chip;
   }
   function round1(v) { return Math.round(v * 10) / 10; }
-  function round2(v) { return Math.round(v * 100) / 100; }
 
   // Порядок внутри шеренги считается автоматически (arc-order) и от порядка
   // перетаскивания не зависит — поэтому подсветку/сброс держим на уровне всего лэйна
