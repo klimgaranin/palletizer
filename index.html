@@ -131,7 +131,7 @@
   .editorPool.dragOver, .editorLane.dragOver { outline: 2px dashed var(--accent); outline-offset: -2px; }
 
   .chipHeaderRow {
-    display: grid; grid-template-columns: 18px 78px 46px 54px 108px 52px 84px;
+    display: grid; grid-template-columns: 18px 78px 46px 54px 108px 76px 84px;
     align-items: center; gap: 6px; padding: 0 8px 6px; min-width: max-content;
     font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em;
   }
@@ -140,7 +140,7 @@
 
   .chip {
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px;
-    display: grid; grid-template-columns: 18px 78px 46px 54px 108px 52px 84px;
+    display: grid; grid-template-columns: 18px 78px 46px 54px 108px 76px 84px;
     align-items: center; gap: 6px; min-width: max-content;
   }
   .chip.dragging { opacity: 0.4; }
@@ -177,7 +177,13 @@
   .dimL, .dimW, .dimH { width: 26px !important; }
   .chipDimsField { gap: 1px; }
   .chipPositionField { font-weight: 700; }
-  .chipPositionField input { width: 22px !important; }
+  /* Здесь, в отличие от остальных полей строки, стрелочки оставляем — щёлкать по паллете/
+     шеренге на единицу вверх-вниз действительно удобнее, чем перепечатывать число. */
+  .chipPositionField input {
+    width: 36px !important; -moz-appearance: auto;
+  }
+  .chipPositionField input::-webkit-outer-spin-button,
+  .chipPositionField input::-webkit-inner-spin-button { -webkit-appearance: auto; margin: 0; }
   .posPallet { color: var(--accent) !important; }
   .chipActionsField { display: flex; align-items: center; justify-content: center; gap: 3px; }
   .chipBtn {
@@ -334,18 +340,17 @@
     </div>
     <div class="errorBox" id="missingArticlesBox" hidden></div>
 
-    <div class="chipHeaderRow">
-      <span></span>
-      <span>Артикул</span>
-      <span title="Высота столбика">H</span>
-      <span>Кол-во</span>
-      <span>Д×Ш×В, см</span>
-      <span title="Паллета / Шеренга">П/Ш</span>
-      <span>Действия</span>
-    </div>
-
     <div class="editorPool" id="editorPoolBox">
       <div class="editorPoolTitle">Не распределено</div>
+      <div class="chipHeaderRow">
+        <span></span>
+        <span>Артикул</span>
+        <span title="Высота столбика">H</span>
+        <span>Кол-во</span>
+        <span>Д×Ш×В, см</span>
+        <span title="Паллета / Шеренга">П/Ш</span>
+        <span>Действия</span>
+      </div>
       <div class="chipRow" id="poolChips"></div>
     </div>
 
@@ -364,7 +369,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.6.0</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.7.0</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -2157,6 +2162,21 @@ PZE.deserializeDoc = function (json) {
     b.title = title;
     return b;
   }
+
+  // Одна и та же строка заголовков колонок — и над пулом (в статичной разметке shell.html),
+  // и перед каждой шеренгой (собирается тут же на лету), чтобы не приходилось листать наверх,
+  // чтобы вспомнить, что значит какая колонка.
+  function buildChipHeaderRow() {
+    const row = el('div', 'chipHeaderRow');
+    row.appendChild(el('span'));
+    row.appendChild(el('span', null, 'Артикул'));
+    const h = el('span', null, 'H'); h.title = 'Высота столбика'; row.appendChild(h);
+    row.appendChild(el('span', null, 'Кол-во'));
+    row.appendChild(el('span', null, 'Д×Ш×В, см'));
+    const ps = el('span', null, 'П/Ш'); ps.title = 'Паллета / Шеренга'; row.appendChild(ps);
+    row.appendChild(el('span', null, 'Действия'));
+    return row;
+  }
   const formatDateRu = (isoDate) => {
     if (!isoDate) return '';
     const [y, m, d] = isoDate.split('-');
@@ -2608,6 +2628,7 @@ PZE.deserializeDoc = function (json) {
         lane.appendChild(el('div', 'laneHint', doc.autoSort
           ? 'Порядок внутри считается автоматически: от края (короче) к центру (выше).'
           : 'Ручной режим: перетащите карточку на другую, чтобы вставить до/после неё.'));
+        lane.appendChild(buildChipHeaderRow());
         const row = el('div', 'chipRow');
         // В авто-режиме показываем карточки сразу в том порядке, в котором они лягут в
         // итоговой раскладке (arc-order). В ручном — как расставил пользователь.
@@ -2754,9 +2775,20 @@ PZE.deserializeDoc = function (json) {
   $('#backToEditorBtn').addEventListener('click', () => { showEditor(); renderEditor(); });
 
   // ---------- Загрузка файла: автоопределение — готовая раскладка или голый заказ ----------
+  // «Заказ 57583018.xlsx» / «раскладка - Заказ 57583018.xlsx» и т.п. — вытаскиваем номер
+  // заказа прямо из имени файла, чтобы не вписывать его в настройки руками каждый раз.
+  // Не трогаем поле, если в нём уже что-то есть (например, восстановлено из истории) —
+  // только когда оно пустое.
+  function fillOrderNumberFromFileName(name) {
+    if (inOrderNumber.value.trim()) return;
+    const m = /заказ\D*(\d+)/i.exec(name || '');
+    if (m) { inOrderNumber.value = m[1]; state.shipment.orderNumber = m[1]; }
+  }
+
   async function handleFile(file) {
     showError('');
     state.fileName = file.name;
+    fillOrderNumberFromFileName(file.name);
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array', cellDates: false });
