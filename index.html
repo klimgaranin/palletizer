@@ -386,7 +386,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.9.1</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.9.2</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -3101,8 +3101,9 @@ PZE.deserializeDoc = function (json) {
     // Ctrl/Cmd+Z — всегда откатывает последнее действие редактора, даже если фокус
     // сейчас в одном из числовых полей строки (а он почти всегда там и есть, поля —
     // это большая часть интерфейса редактора; блокировать по фокусу на input/select
-    // означало на практике блокировать почти всегда).
-    const isUndoCombo = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z';
+    // означало на практике блокировать почти всегда). Смотрим на физическую клавишу (code),
+    // а не на символ (key): при русской раскладке key даёт «я», и Ctrl+Z не срабатывал.
+    const isUndoCombo = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ';
     if (!isUndoCombo) return;
     if (!editorSection.hidden) { e.preventDefault(); undoLastAction(); }
   });
