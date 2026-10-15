@@ -147,7 +147,7 @@
   /* Колонки шапки и строки — ОДИН и тот же список, иначе заголовок разъедется с данными.
      Паллета/Шеренга и Высота — самые «текстовые» заголовки, поэтому шире остальных. */
   .chipHeaderRow {
-    display: grid; grid-template-columns: 18px 72px 64px 54px 108px 132px 84px;
+    display: grid; grid-template-columns: 18px 72px 64px 54px 140px 132px 56px 112px;
     align-items: center; gap: 6px; padding: 0 8px 6px; min-width: max-content;
     font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em;
   }
@@ -156,7 +156,7 @@
 
   .chip {
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px;
-    display: grid; grid-template-columns: 18px 72px 64px 54px 108px 132px 84px;
+    display: grid; grid-template-columns: 18px 72px 64px 54px 140px 132px 56px 112px;
     align-items: center; gap: 6px; min-width: max-content;
   }
   /* Внутри шеренги вдвое меньше ширины, чем над общим пулом (две колонки на странице
@@ -165,7 +165,7 @@
      где места хватает, колонки остаются широкими и полностью читаемыми. */
   .editorLane .chipHeaderRow,
   .editorLane .chip {
-    grid-template-columns: 18px 62px 52px 50px 96px 104px 78px;
+    grid-template-columns: 18px 62px 52px 50px 132px 104px 52px 108px;
   }
   .chip.dragging { opacity: 0.4; }
   .chipArticle {
@@ -200,6 +200,27 @@
   .chipQtyInput { width: 28px !important; }
   .dimL, .dimW, .dimH { width: 26px !important; }
   .chipDimsField { gap: 1px; }
+  .chipArrow {
+    border: none; background: transparent; color: var(--muted); border-radius: 4px; width: 14px; height: 20px;
+    padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .chipArrow:hover { background: var(--hover); color: var(--text); }
+  .chipRotField { display: flex; align-items: center; justify-content: center; gap: 3px; }
+  .chipRotField input[type=checkbox] { margin: 0; }
+  .chipBtnText { width: auto; padding: 0 5px; font-size: 10px; font-weight: 700; }
+  .chip.chipWide { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
+  .bad { color: var(--danger); font-weight: 700; }
+  .laneInfo { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .editorPalletStats { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .newPalletDrop {
+    border: 2px dashed var(--border); border-radius: 10px; padding: 18px; text-align: center;
+    color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 16px;
+  }
+  .newPalletDrop.dragOver { border-color: var(--accent); color: var(--text); }
+  .infoBox {
+    border: 1px solid var(--border); background: var(--card-bg); border-radius: 8px;
+    padding: 10px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  }
   .chipPositionField { font-weight: 700; }
   /* Здесь, в отличие от остальных полей строки, стрелочки оставляем — щёлкать по паллете/
      шеренге на единицу вверх-вниз действительно удобнее, чем перепечатывать число. */
@@ -221,8 +242,10 @@
   .chipMove { font-size: 11px; font-weight: 600; padding: 3px 4px; border-radius: 6px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); }
 
   .editorPallet { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
-  .editorPalletHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .editorPalletHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
   .editorPalletHead b { font-size: 14px; }
+  .editorPalletHeadActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .editorPalletHeadActions .orderModeToggle { padding: 5px 10px; font-size: 11px; gap: 5px; }
   .editorLanes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   @media (max-width: 620px) { .editorLanes { grid-template-columns: 1fr; } }
   /* min-width: 0 обязателен: без него grid-ячейка по умолчанию не может стать уже своего
@@ -318,6 +341,8 @@
   </div>
 
   <div class="errorBox" id="errorBox" hidden></div>
+  <div class="errorBox" id="storageWarning" hidden></div>
+  <div class="infoBox" id="infoBox" hidden></div>
 
   <div class="settingsBar">
     <button type="button" class="ghostBtn" id="settingsToggle">Настройки раскладки и отгрузки</button>
@@ -328,8 +353,12 @@
     <div class="field"><label>Длина паллеты, мм</label><input type="number" id="cfgLength" value="1200" step="10" /></div>
     <div class="field"><label>Ширина паллеты, мм</label><input type="number" id="cfgWidth" value="800" step="10" /></div>
     <div class="field">
-      <label>Блоков на паллету <span class="infoIcon" tabindex="0" title="Сколько блоков артикулов из Excel (групп между пустыми строками) объединяются в одну паллету. По умолчанию 2 — каждая паллета из двух шеренг друг напротив друга.">i</span></label>
-      <input type="number" id="cfgBlocksPerPallet" value="2" min="1" step="1" />
+      <label>Макс. высота паллеты с поддоном, см <span class="infoIcon" tabindex="0" title="Поддон 14.4 см + самый высокий столбик. Если паллета выше — в редакторе красным, а при ручном действии, которое её превышает, приложение просит подтверждение.">i</span></label>
+      <input type="number" id="cfgMaxHeight" value="200" min="20" step="1" />
+    </div>
+    <div class="field">
+      <label>Делить столбики выше, см <span class="infoIcon" tabindex="0" title="Для кнопки «Разложить авто»: столбики выше этого числа делятся пополам. Пусто — порог выбирается автоматически (делятся только явно выделяющиеся по высоте).">i</span></label>
+      <input type="number" id="cfgSplitThreshold" min="1" step="1" placeholder="авто" />
     </div>
     <div class="field"><label>Заказ №</label><input type="text" id="shipOrderNumber" placeholder="напр. 4521" /></div>
     <div class="field"><label>Дата отгрузки</label><input type="date" id="shipDate" /></div>
@@ -353,14 +382,12 @@
             <option value="lane">в другую шеренгу</option>
           </select>
         </label>
-        <label class="orderModeToggle" title="Автосортировка расставляет короба в шеренге по высоте (короче к краю, выше к центру). В ручном режиме порядок внутри шеренги задаётся перетаскиванием.">
-          <input type="checkbox" id="autoSortToggle" checked />
-          <span id="autoSortLabel">Порядок: авто</span>
-        </label>
+        <button type="button" class="ghostBtn" id="autoLayoutBtn" title="Предварительно разложить всё, что в «Не распределено», по паллетам (черновая раскидка — дальше доводите руками)">Разложить авто</button>
         <button type="button" class="ghostBtn" id="addPalletBtn" title="Добавить паллету">+ Паллета</button>
         <button type="button" class="ghostBtn" id="refreshLookupBtn" title="Обновить справочник габаритов">Справочник</button>
         <button type="button" class="ghostBtn" id="clearDraftBtn" title="Отменить все изменения и вернуться к состоянию сразу после загрузки файла">Сбросить</button>
         <button type="button" class="ghostBtn" id="exportExcelEditorBtn" title="Скачать распределение в Excel">Excel</button>
+        <button type="button" class="ghostBtn" id="exportDraftBtn" title="Скачать черновик (исходный и текущий документ) в JSON">Черновик JSON</button>
         <button type="button" class="primaryBtn" id="finishEditingBtn" title="Построить карточки паллет">Готово</button>
       </div>
     </div>
@@ -386,7 +413,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.9.2</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.10.2</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -435,27 +462,31 @@
       </ul>
 
       <h3>Если короб не помещается</h3>
-      <p>Если по данным короб получается шире половины ширины паллеты или шеренга выходит за габарит — это сигнал поправить сами данные (например, кнопкой «⇄» поменять местами длину и высоту для этого артикула), а не поведение, которое нужно чинить в приложении.</p>
+      <p>Свес с паллеты — 0 см, максимальная высота паллеты с поддоном — 200 см (настраивается). Если шеренга получается длиннее паллеты, короб шире половины ширины паллеты или паллета выше лимита, в редакторе это подсвечивается красным (длина шеренги, высота, рамка строки; на карточке — красная обводка короба). Если вы своим действием (перенос, поворот, изменение количества и т. д.) создаёте такую проблему, приложение спросит подтверждение — «Нет» отменит действие. Ничего не разворачивается и не двигается автоматически: поправьте раскладку или поверните короб (стрелки между полями Д/Ш/В, «⇄»).</p>
 
       <h3>Редактор раскладки</h3>
       <p>Любой загруженный заказ открывается в редакторе, где вручную (или полуавтоматически) распределяется по паллетам и шеренгам:</p>
       <ul>
-        <li>Каждый артикул — строка со своим значком <b>H:</b> (высота столбика — им и стоит ориентироваться при раскладке). Перетащите строку мышью за ручку «⠿», либо — быстрее — впишите номер в поле <b>«Паллета / Шеренга»</b> прямо на строке (0 в поле паллеты = вернуть в «не распределено»). Если указать номер паллеты больше, чем сейчас существует, недостающие паллеты создадутся сами.</li>
+        <li>Каждый артикул — строка со своим значком <b>H:</b> (высота столбика — им и стоит ориентироваться при раскладке). Перетащите строку мышью за ручку «⠿», либо — быстрее — впишите номер в поле <b>«Паллета / Шеренга»</b> прямо на строке (0 в поле паллеты = вернуть в «не распределено»). Номер на один больше последней паллеты создаёт новую паллету.</li>
         <li><b>✂</b> — разделить: отделить часть количества в отдельную строку (например, часть коробов на одну паллету, часть на другую). Неактивна (серая), если в строке всего 1 шт — делить нечего.</li>
-        <li><b>⇄</b> — поменять местами длину и высоту короба, если так он лучше ложится.</li>
+        <li><b>⇄</b> в колонке «Действия» — поменять местами длину и высоту короба; стрелки <b>↔</b> между полями Д, Ш, В меняют местами длину↔ширину и ширину↔высоту. Поворот относится только к этой строке (столбику): один артикул можно разделить на несколько столбиков и повернуть только один из них. Повёрнутая строка помечена галочкой «Поворот» — снимите её, и габариты вернутся как в справочнике; кнопка «все» применяет ориентацию ко всем строкам артикула.</li>
+        <li><b>Склеить</b> (две стрелки к центру) — слить в одну строку другую строку того же артикула с такими же габаритами из той же шеренги.</li>
+        <li><b>Разложить авто</b> — черновая раскладка всего, что в «Не распределено»: самые высокие столбики делятся пополам (порог — в настройках, пусто = авто), строки раскладываются по паллетам от высоких к низким без свеса и с учётом лимита высоты; не влезшее остаётся в пуле. Один шаг «Отменить». Пустая паллета, из которой ушла последняя строка, удаляется сама; под последней паллетой — зона «новая паллета» для перетаскивания.</li>
+        <li><b>Черновик JSON</b> — скачать исходный и текущий документ (для разбора ручных раскладок).</li>
         <li>Стрелка-возврат — убрать строку из шеренги обратно в «Не распределено». Из заказа ничего не удаляется насовсем — только переносится между шеренгами и пулом.</li>
-        <li>Габариты и количество на строке можно просто вписать вручную поверх подтянутых из справочника (без стрелочек — только вручную). Вес в редакторе не показывается и не попадает в выгрузки — для раскладки он не нужен.</li>
-        <li><b>Порядок в шеренге: авто/вручную</b> — по умолчанию короба внутри шеренги сами расставляются по высоте столбика (короче к краю, выше к центру). Переключив в «вручную», можно перетащить строку на другую внутри шеренги (за ручку «⠿»), чтобы вставить её до/после — тогда порядок задаёте сами.</li>
+        <li>Габариты и количество на строке можно просто вписать вручную поверх подтянутых из справочника. Ручной ввод габарита — это исправление данных: оно применяется ко всем строкам артикула (с учётом поворота каждой) и обновляет габариты «как в справочнике». Число должно быть больше 0. Число коробов и вес груза показаны в заголовке паллеты, в шапке карточки и в сводной странице PDF.</li>
+        <li><b>Порядок в шеренге: авто/вручную</b> — переключатель у заголовка каждой паллеты, свой для каждой паллеты отдельно. По умолчанию короба внутри шеренги сами расставляются по высоте столбика (короче к краю, выше к центру). Переключив конкретную паллету в «вручную», можно перетащить строку на другую внутри шеренги (за ручку «⠿»), чтобы вставить её до/после — тогда порядок на этой паллете задаёте сами.</li>
         <li><b>Отменить (Ctrl+Z)</b> — откатывает последнее действие в редакторе (перенос, разбивку, правку поля и т.д.), можно нажимать много раз подряд.</li>
         <li>Количество коробов по артикулу нельзя увеличить сверх того, что было в заказе — если вписать в поле количества число больше текущего, недостающее заберётся из другой строки того же артикула. Переключатель <b>«Излишек →»</b> решает, откуда брать при увеличении и куда девать при уменьшении: в нераспределённый остаток или в другую шеренгу, где этот артикул уже есть.</li>
+        <li>Кнопка <b>«Справочник»</b> перезагружает справочник: найденные теперь артикулы попадают в «Не распределено», а при отличии габаритов приложение спросит, обновить ли их. Справочник при загрузке заказа всегда скачивается заново; сохранённая копия используется только если сеть недоступна (с предупреждением). Настройки (размеры паллеты, ссылка на справочник, лимит высоты, порог деления) запоминаются между сеансами.</li>
         <li>Черновик автоматически сохраняется в этом браузере — обновление страницы работу не сотрёт. «Сбросить изменения» возвращает раскладку к тому виду, в котором она была сразу после загрузки файла (сам файл при этом остаётся в истории).</li>
         <li>Кнопка <b>«История файлов»</b> над областью загрузки — все заказы, которые вы открывали в этом браузере, с возможностью вернуться к любому из них в один клик.</li>
-        <li>«Готово → карточки» строит финальные карточки паллет из текущей раскладки — дальше с ними можно работать как обычно (PDF/PNG/Excel).</li>
+        <li>«Готово → карточки» строит финальные карточки паллет из текущей раскладки — дальше с ними можно работать как обычно (PDF/PNG/Excel). Если в «Не распределено» что-то осталось, приложение спросит подтверждение; пустые паллеты в карточки, PDF и Excel не попадают.</li>
       </ul>
 
       <h3>Экспорт и печать</h3>
       <ul>
-        <li><b>Скачать PDF</b> — все карточки паллет одним файлом, под печать A4 (альбомная ориентация).</li>
+        <li><b>Скачать PDF</b> — сводная страница (паллеты: коробов, вес, высота, длины шеренг; сверка по артикулам; не найденные в справочнике) и затем все карточки паллет, под печать A4 (альбомная ориентация).</li>
         <li><b>PNG</b> на карточке — сохранить именно эту паллету отдельным изображением.</li>
         <li><b>Скачать Excel</b> — таблица итогового распределения (артикул, кол-во, габариты, паллета/шеренга) с рамками, для печати или архива. Доступна и в редакторе (по текущему состоянию), и после «Готово».</li>
         <li>PDF и Excel скачиваются под именем «Раскладка №‹номер заказа›».</li>
@@ -951,10 +982,16 @@ const PZ = {};
 
 // ---------- Модель / конфиг ----------
 let _pzNextId = 1;
+// Габариты хранятся парой: base* — как в справочнике, length/width/heightCm — текущие
+// (после поворота этой строки). perm — перестановка осей: current[i] = base[perm[i]].
 PZ.makeArticle = (a) => ({
   id: a.id || 'r' + (_pzNextId++),
   article: a.article, qty: a.qty, lengthCm: a.lengthCm, widthCm: a.widthCm,
   heightCm: a.heightCm, weightPerBoxKg: a.weightPerBoxKg,
+  baseL: a.baseL != null ? a.baseL : a.lengthCm,
+  baseW: a.baseW != null ? a.baseW : a.widthCm,
+  baseH: a.baseH != null ? a.baseH : a.heightCm,
+  perm: Array.isArray(a.perm) && a.perm.length === 3 ? a.perm.slice() : [0, 1, 2],
   get stackHeightCm() { return this.heightCm * this.qty; },
   get stackWeightKg() { return this.weightPerBoxKg * this.qty; },
 });
@@ -966,82 +1003,27 @@ PZ.bumpIdCounter = function (fromId) {
 };
 
 PZ.defaultConfig = () => ({
-  blocksPerPallet: 2,
-  viewsPerPallet: 2,
   pallet: { lengthMm: 1200, widthMm: 800 },
+  maxHeightCm: 200,        // макс. высота паллеты с поддоном
+  splitThresholdCm: null,  // null — авто-порог деления высоких столбиков (Ф5)
 });
 
-// ---------- Excel-парсер (перенос ExcelParser.cs) ----------
-// sheetRows — массив массивов ячеек (как из XLSX.utils.sheet_to_json(ws, {header:1, raw:true}))
-PZ.parseBlocks = function (sheetRows) {
-  if (!sheetRows || sheetRows.length === 0) throw new Error('Лист пустой — нет данных для разбора.');
+// Разбор числа из Excel/TSV: убирает обычные/неразрывные/узкие пробелы, «,» → «.».
+PZ.parseNum = function (v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
+  if (v === undefined || v === null) return NaN;
+  const t = String(v).replace(/[\s\u00A0\u202F\u2009]/g, '').replace(',', '.');
+  if (t === '') return NaN;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : NaN;
+};
 
-  const header = sheetRows[0] || [];
-  const lastCol = header.length;
-
-  const norm = (v) => (v === undefined || v === null ? '' : String(v).trim().toLowerCase());
-  const findCol = (pred) => {
-    for (let c = 0; c < lastCol; c++) {
-      const h = norm(header[c]);
-      if (h && pred(h)) return c;
-    }
-    return -1;
-  };
-
-  const colArticle = findCol((h) => h.includes('артикул'));
-  if (colArticle < 0) throw new Error("Не найдена колонка 'Артикул' в заголовке таблицы.");
-  const colQty = findCol((h) => h.includes('кол-во') || h.includes('количество'));
-  if (colQty < 0) throw new Error("Не найдена колонка 'Кол-во' в заголовке таблицы.");
-  const colLength = findCol((h) => h.includes('длина'));
-  if (colLength < 0) throw new Error("Не найдена колонка 'Длина' в заголовке таблицы.");
-  const colWidth = findCol((h) => h.includes('ширина'));
-  if (colWidth < 0) throw new Error("Не найдена колонка 'Ширина' в заголовке таблицы.");
-  const colHeight = findCol((h) => h.includes('высота') && !h.includes('столб') && !h.includes('стопк'));
-  if (colHeight < 0) throw new Error("Не найдена колонка 'Высота' (габарит короба) в заголовке таблицы.");
-  // Вес больше не показывается в UI и не выгружается в Excel — колонка необязательна:
-  // если её нет (например, в собственной выгрузке приложения), вес просто считается 0.
-  const colWeight = findCol((h) => h.includes('вес') && (h.includes('шт') || h.includes('короб')));
-
-  const isEmptyCell = (v) => v === undefined || v === null || String(v).trim() === '';
-  const readNumber = (v, rowNum, fieldName) => {
-    if (isEmptyCell(v)) throw new Error(`Строка ${rowNum}: пустое значение в колонке '${fieldName}'.`);
-    const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
-    if (Number.isNaN(n)) throw new Error(`Строка ${rowNum}: значение '${v}' в колонке '${fieldName}' не является числом.`);
-    return n;
-  };
-
-  const blocks = [];
-  let current = [];
-  let currentStart = null;
-  const flush = (endRow) => {
-    if (current.length === 0) return;
-    blocks.push({ articles: current, sourceStartRow: currentStart, sourceEndRow: endRow });
-    current = [];
-    currentStart = null;
-  };
-
-  for (let r = 1; r < sheetRows.length; r++) {
-    const row = sheetRows[r] || [];
-    const rowNum = r + 1;
-    const articleText = isEmptyCell(row[colArticle]) ? '' : String(row[colArticle]).trim();
-    const qtyEmpty = isEmptyCell(row[colQty]);
-
-    if (!articleText && qtyEmpty) { flush(rowNum - 1); continue; }
-    if (!articleText) continue; // строка-итог без артикула — пропускаем, не разделитель
-
-    const qty = Math.round(readNumber(row[colQty], rowNum, 'Кол-во'));
-    const length = readNumber(row[colLength], rowNum, 'Длина');
-    const width = readNumber(row[colWidth], rowNum, 'Ширина');
-    const height = readNumber(row[colHeight], rowNum, 'Высота');
-    const weight = colWeight >= 0 ? readNumber(row[colWeight], rowNum, 'вес шт') : 0;
-
-    if (currentStart === null) currentStart = rowNum;
-    current.push(PZ.makeArticle({ article: articleText, qty, lengthCm: length, widthCm: width, heightCm: height, weightPerBoxKg: weight }));
-  }
-  flush(sheetRows.length);
-
-  if (blocks.length === 0) throw new Error('Не найдено ни одного блока артикулов (проверьте, что таблица не пустая).');
-  return blocks;
+// Ключ сопоставления артикулов: без регистра/лишних пробелов, кириллические двойники
+// латиницы приводятся к латинице. В интерфейсе артикул показывается как в заказе.
+PZ.normArticle = function (v) {
+  const map = { 'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'Х': 'X', 'У': 'Y' };
+  return String(v == null ? '' : v).replace(/[\u00A0\u202F\u2009]/g, ' ').replace(/\s+/g, ' ').trim()
+    .toUpperCase().replace(/[АВЕКМНОРСТХУ]/g, (ch) => map[ch]);
 };
 
 // Определяет формат файла: готовая раскладка (есть колонки габаритов) или голый
@@ -1062,7 +1044,9 @@ PZ.looksLikeOrder = function (sheetRows) {
 
 // ---------- Заказ (перенос вручную: только Артикул + Кол-во, без габаритов —
 // габариты дотягиваются из справочника Google Sheets) ----------
-PZ.parseOrder = function (sheetRows) {
+// formattedRows — те же строки листа, прочитанные как отформатированный текст (raw:false):
+// артикул берётся оттуда, чтобы числовые артикулы не теряли ведущие нули.
+PZ.parseOrder = function (sheetRows, formattedRows) {
   if (!sheetRows || sheetRows.length === 0) throw new Error('Лист пустой — нет данных для разбора.');
   const header = sheetRows[0] || [];
   const norm = (v) => (v === undefined || v === null ? '' : String(v).trim().toLowerCase());
@@ -1081,13 +1065,16 @@ PZ.parseOrder = function (sheetRows) {
   const lines = [];
   for (let r = 1; r < sheetRows.length; r++) {
     const row = sheetRows[r] || [];
-    const article = isEmptyCell(row[colArticle]) ? '' : String(row[colArticle]).trim();
+    const fmtRow = formattedRows && formattedRows[r];
+    const artSrc = fmtRow && !isEmptyCell(fmtRow[colArticle]) ? fmtRow[colArticle] : row[colArticle];
+    const article = isEmptyCell(artSrc) ? '' : String(artSrc).trim();
     if (!article) continue;
     let qtyRaw = colSupply >= 0 ? row[colSupply] : undefined;
     if (isEmptyCell(qtyRaw) && colOrdered >= 0) qtyRaw = row[colOrdered];
     if (isEmptyCell(qtyRaw)) continue;
-    const qty = Math.round(typeof qtyRaw === 'number' ? qtyRaw : parseFloat(String(qtyRaw).replace(',', '.')));
-    if (!qty || qty <= 0) continue;
+    // Единицы товара не округляются: округление вверх — одно, при пересчёте в коробы.
+    const qty = PZ.parseNum(qtyRaw);
+    if (!(qty > 0)) continue;
     lines.push({ article, qty });
   }
   if (lines.length === 0) throw new Error('В заказе не найдено ни одной строки с артикулом и количеством.');
@@ -1118,7 +1105,7 @@ PZ.parseLookupTsv = function (tsvText) {
   if (colLength < 0 || colWidth < 0 || colHeight < 0 || colWeight < 0)
     throw new Error('В справочнике не найдены колонки габаритов OUTER (длина/ширина/высота/вес).');
 
-  const num = (v) => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
+  const num = (v) => { const n = PZ.parseNum(v); return Number.isFinite(n) ? n : null; };
   const map = new Map();
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
@@ -1127,39 +1114,37 @@ PZ.parseLookupTsv = function (tsvText) {
     const l = num(row[colLength]), w = num(row[colWidth]), h = num(row[colHeight]), wt = num(row[colWeight]);
     if (l == null || w == null || h == null || wt == null) continue;
     const unitsPerBox = colUnitsPerBox >= 0 ? (num(row[colUnitsPerBox]) || 1) : 1;
-    map.set(code, { lengthCm: l, widthCm: w, heightCm: h, weightPerBoxKg: wt, unitsPerBox });
+    map.set(PZ.normArticle(code), { article: code, lengthCm: l, widthCm: w, heightCm: h, weightPerBoxKg: wt, unitsPerBox });
   }
   if (map.size === 0) throw new Error('Не удалось разобрать ни одной строки справочника.');
   return map;
 };
 
 // Сшивает строки заказа (артикул + количество ЕДИНИЦ товара, напр. метров каната)
-// со справочником габаритов. Заказанное количество делится на "Кол-во, шт OUTER"
-// (сколько единиц товара помещается в один короб), чтобы получить число коробов —
-// именно так эти цифры считаются вручную сейчас. Возвращает {rows, missing} —
-// missing — коды без данных в справочнике (сигнал проверить данные, не догадка).
+// со справочником габаритов. Единицы по одному артикулу (с учётом нормализации) сначала
+// суммируются, и только потом делятся на "Кол-во, шт OUTER" с округлением вверх —
+// именно так эти цифры считаются вручную. Возвращает {rows, missing}; missing —
+// [{article, qty}] (qty — единицы товара): артикулы без данных в справочнике.
 PZ.mergeOrderWithLookup = function (orderLines, lookupMap) {
+  const groups = new Map();
+  for (const line of orderLines) {
+    const key = PZ.normArticle(line.article);
+    const g = groups.get(key);
+    if (g) g.qty += line.qty; else groups.set(key, { article: line.article, qty: line.qty });
+  }
   const rows = [];
   const missing = [];
-  for (const line of orderLines) {
-    const dims = lookupMap.get(line.article);
-    if (!dims) { missing.push(line.article); continue; }
-    const boxQty = Math.max(1, Math.ceil(line.qty / (dims.unitsPerBox || 1)));
+  for (const [key, g] of groups) {
+    const dims = lookupMap.get(key);
+    if (!dims) { missing.push({ article: g.article, qty: g.qty }); continue; }
+    // −1e-9: сумма дробных единиц (0.1 + 0.2) не должна давать лишний короб из-за погрешности.
+    const boxQty = Math.max(1, Math.ceil(g.qty / (dims.unitsPerBox || 1) - 1e-9));
     rows.push(PZ.makeArticle({
-      article: line.article, qty: boxQty,
+      article: g.article, qty: boxQty,
       lengthCm: dims.lengthCm, widthCm: dims.widthCm, heightCm: dims.heightCm, weightPerBoxKg: dims.weightPerBoxKg,
     }));
   }
   return { rows, missing };
-};
-
-// ---------- Раскладка паллет (перенос PalletBuilder.cs) ----------
-PZ.buildPallets = function (blocks, config) {
-  const pallets = [];
-  for (let i = 0; i < blocks.length; i += config.blocksPerPallet) {
-    pallets.push({ index: pallets.length, groups: blocks.slice(i, i + config.blocksPerPallet) });
-  }
-  return pallets;
 };
 
 PZ.orderColumns = (block) => [...block.articles].sort((a, b) => a.stackHeightCm - b.stackHeightCm);
@@ -1223,6 +1208,23 @@ PZ.colorForArticle = function (article) {
   return { ...PRINT_SAFE_PALETTE[idx] };
 };
 
+// Цвета артикулов одной паллеты: каждый берёт свой хэш-индекс, при занятом — следующий
+// свободный по кругу (повтор только если артикулов больше, чем цветов в палитре).
+// Возвращает Map(артикул → цвет).
+PZ.assignColors = function (articles) {
+  const uniq = [...new Set(articles)].sort();
+  const n = PRINT_SAFE_PALETTE.length;
+  const used = new Set();
+  const out = new Map();
+  for (const art of uniq) {
+    let idx = fnvMix(art, 0x9e3779b1) % n;
+    if (used.size < n) while (used.has(idx)) idx = (idx + 1) % n;
+    used.add(idx);
+    out.set(art, { ...PRINT_SAFE_PALETTE[idx] });
+  }
+  return out;
+};
+
 function mulColor(c, factor, alpha) {
   const ch = (v) => Math.min(255, Math.max(0, Math.round(v * factor)));
   return { r: ch(c.r), g: ch(c.g), b: ch(c.b), a: alpha === undefined ? (c.a === undefined ? 1 : c.a) : alpha };
@@ -1234,14 +1236,6 @@ PZ.faceLeft = (c, shade = 1) => mulColor(c, 0.76 * shade);
 // другом на светлом фоне, обводка граней темнее и плотнее, чем была у насыщенных цветов.
 PZ.edgeColor = (c, alpha = 200 / 255) => mulColor(c, 0.32, alpha);
 PZ.css = (c) => `rgba(${c.r},${c.g},${c.b},${c.a === undefined ? 1 : c.a})`;
-function lighten(c, factor) {
-  // приблизительно как SKColor.ToHsl/FromHsl — но для наших целей (виды сверху/профиль)
-  // достаточно линейного просветления к белому.
-  const t = Math.max(0, factor - 1);
-  const r = c.r + (255 - c.r) * t, g = c.g + (255 - c.g) * t, b = c.b + (255 - c.b) * t;
-  const k = Math.min(1, factor);
-  return { r: c.r * k + (factor > 1 ? (r - c.r) : 0), g: c.g * k + (factor > 1 ? (g - c.g) : 0), b: c.b * k + (factor > 1 ? (b - c.b) : 0) };
-}
 // Проще и честнее к оригиналу: пересчёт через HSL.
 function rgbToHsl(c) {
   const r = c.r / 255, g = c.g / 255, b = c.b / 255;
@@ -1276,6 +1270,7 @@ PZ.buildScene = function (pallet, config, title, options) {
   const palletWidth = config.pallet.widthMm / 10.0;
   const centerX = palletLength / 2, centerY = palletWidth / 2;
   const columns = [];
+  const colors = PZ.assignColors(pallet.groups.flatMap((g) => g.articles.map((a) => a.article)));
 
   pallet.groups.forEach((block, laneIdx) => {
     const ordered = manualOrder ? [...block.articles] : arcOrder(PZ.orderColumns(block));
@@ -1288,13 +1283,13 @@ PZ.buildScene = function (pallet, config, title, options) {
       const y0 = flushBelow ? centerY - article.widthCm : centerY;
       columns.push({
         article, x0: x, y0, lengthCm: article.lengthCm, widthCm: article.widthCm,
-        color: PZ.colorForArticle(article.article), lane: laneIdx + 1,
+        color: colors.get(article.article), lane: laneIdx + 1,
       });
       x += article.lengthCm;
     }
   });
 
-  return { columns, palletLengthCm: palletLength, palletWidthCm: palletWidth, title, centerX, centerY };
+  return { columns, palletLengthCm: palletLength, palletWidthCm: palletWidth, title, centerX, centerY, maxHeightCm: config.maxHeightCm || 200 };
 };
 
 // ---------- Камера (перенос OrthoCamera.cs) ----------
@@ -1433,7 +1428,9 @@ PZR.drawTopView = function (ctx, r, scene) {
     grad.addColorStop(0, PZ.css(PZ.lightenHsl(col.color, 1.08)));
     grad.addColorStop(1, PZ.css(PZ.lightenHsl(col.color, 0.9)));
     fillRoundRect(ctx, box, 4, grad);
-    strokeRoundRect(ctx, box, 4, '#2A2C2F', 1.3);
+    const problem = col.widthCm > scene.palletWidthCm / 2 + 1e-6 || col.x0 < -1e-6 || col.x0 + col.lengthCm > scene.palletLengthCm + 1e-6;
+    if (problem) strokeRoundRect(ctx, box, 4, '#D32F2F', 3);
+    else strokeRoundRect(ctx, box, 4, '#2A2C2F', 1.3);
 
     const statsLine = `${col.article.qty} шт · H${Math.round(col.article.stackHeightCm)}`;
     drawBoxLabel(ctx, box, col.article.article, statsLine, labelFont, labelSmallFont);
@@ -1876,14 +1873,29 @@ function drawHeader(ctx, pallet, scene, shipment) {
   ctx.fillText(`Паллета ${pallet.index + 1}`, Margin, 44);
 
   const maxH = scene.columns.length > 0 ? Math.max(...scene.columns.map(c => c.article.stackHeightCm)) : 0;
+  const totalH = scene.columns.length > 0 ? maxH + PalletHeightCm : 0;
   const laneLengths = {};
   for (const c of scene.columns) laneLengths[c.lane] = (laneLengths[c.lane] || 0) + c.lengthCm;
-  const lanesText = Object.keys(laneLengths).sort((a, b) => a - b)
-    .map(k => `шеренга ${k}: ${Math.round(laneLengths[k])} см`).join('   ');
+  const boxes = scene.columns.reduce((s, c) => s + c.article.qty, 0);
+  const weight = scene.columns.reduce((s, c) => s + c.article.stackWeightKg, 0);
 
-  ctx.font = PZR.font('bold', 17); ctx.fillStyle = '#44464A';
-  const summary = `Столбиков: ${scene.columns.length}   ·   макс. высота: ${Math.round(maxH)} см   ·   ${lanesText}`;
-  ctx.fillText(summary, Margin, 72);
+  const OK = '#44464A', BAD = '#D32F2F';
+  const parts = [
+    { t: `Столбиков: ${scene.columns.length}   ·   коробов: ${boxes}   ·   вес груза: ${Math.round(weight * 10) / 10} кг   ·   `, c: OK },
+    { t: `высота с поддоном: ${Math.round(totalH)} см`, c: totalH > scene.maxHeightCm + 1e-6 ? BAD : OK },
+  ];
+  for (const k of Object.keys(laneLengths).sort((a, b) => a - b)) {
+    const len = laneLengths[k];
+    parts.push({ t: '   ·   ', c: OK });
+    parts.push({ t: `шеренга ${k}: ${Math.round(len)} см`, c: len > scene.palletLengthCm + 1e-6 ? BAD : OK });
+  }
+  ctx.font = PZR.font('bold', 17);
+  let x = Margin;
+  for (const part of parts) {
+    ctx.fillStyle = part.c;
+    ctx.fillText(part.t, x, 72);
+    x += ctx.measureText(part.t).width;
+  }
 
   const fieldsY = 106;
   drawField(ctx, Margin, fieldsY, 300, 'Заказ №', shipment.orderNumber);
@@ -1904,6 +1916,86 @@ function drawField(ctx, x, y, width, label, value) {
     ctx.beginPath(); ctx.moveTo(x + labelW + 8, y + 3); ctx.lineTo(x + width, y + 3); ctx.stroke();
   }
 }
+
+// ---------- Сводная страница (первая в PDF) ----------
+// data: {pallets:[{index, columns, boxes, weightKg, heightCm, tooHigh, lanes:[{len, over}]}],
+//        articles:[{article, total, placed, pool}], missing:[{article, qty}]}
+// Возвращает массив canvas (длинная сводка переносится на следующие страницы A4).
+PZR.composeSummary = function (data, shipment) {
+  shipment = shipment || {};
+  const W = CanvasWidth, PageH = 1414, LineH = 36, M = 40;
+  const OK = '#202022', BAD = '#D32F2F', HEAD = '#707276';
+  const lines = []; // {kind, cells:[{t,c,x}], title}
+  const palletCols = [0, 150, 330, 520, 760, 1060];
+  const articleCols = [0, 560, 800, 1040];
+  const addTable = (title, heads, cols, rows) => {
+    lines.push({ kind: 'h2', text: title });
+    const head = { kind: 'th', cells: heads.map((t, i) => ({ t, x: cols[i], c: HEAD })), repeat: null };
+    lines.push(head);
+    rows.forEach((cells) => lines.push({ kind: 'tr', cells: cells.map((cell, i) => ({ t: cell.t, c: cell.bad ? BAD : OK, x: cols[i] })), head }));
+  };
+
+  addTable('Паллеты', ['Паллета', 'Строк', 'Коробов', 'Вес, кг', 'Высота с поддоном, см', 'Длины шеренг, см'], palletCols,
+    data.pallets.map((p) => [
+      { t: `№ ${p.index + 1}` }, { t: String(p.columns) }, { t: String(p.boxes) },
+      { t: String(Math.round(p.weightKg * 10) / 10) }, { t: String(Math.round(p.heightCm)), bad: p.tooHigh },
+      { t: p.lanes.map((l, i) => `${i + 1}: ${Math.round(l.len)}${l.over ? ' (свес)' : ''}`).join('   '), bad: p.lanes.some((l) => l.over) },
+    ]));
+  lines.push({ kind: 'gap' });
+  addTable('Сверка по артикулам', ['Артикул', 'Коробов всего', 'Разложено', 'В пуле'], articleCols,
+    data.articles.map((a) => [
+      { t: a.article }, { t: String(a.total) }, { t: String(a.placed) }, { t: String(a.pool), bad: a.pool !== 0 },
+    ]));
+  if (data.missing && data.missing.length) {
+    lines.push({ kind: 'gap' });
+    lines.push({ kind: 'h2', text: 'Не найдены в справочнике (в раскладку не попали)' });
+    data.missing.forEach((m) => lines.push({ kind: 'text', text: `${m.article} — ${Math.round(m.qty * 100) / 100} ед.` }));
+  }
+
+  // Разбивка по страницам (с повтором шапки таблицы на следующей странице)
+  const pages = [[]];
+  let used = M + 110; // верхнее поле + заголовок первой страницы
+  const cap = (n) => PageH - M - n;
+  for (const ln of lines) {
+    if (used + LineH > cap(0)) {
+      pages.push([]); used = M;
+      if (ln.kind === 'tr' && ln.head) { pages[pages.length - 1].push(ln.head); used += LineH; }
+    }
+    pages[pages.length - 1].push(ln); used += LineH;
+  }
+
+  return pages.map((pageLines, pi) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = PageH;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, PageH);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    let y = M;
+    if (pi === 0) {
+      ctx.font = PZR.font('bold', 36); ctx.fillStyle = '#1C1D1F';
+      ctx.fillText('Сводка по заказу' + (shipment.orderNumber ? ` №${shipment.orderNumber}` : ''), M, y + 34);
+      ctx.font = PZR.font(600, 18); ctx.fillStyle = HEAD;
+      ctx.fillText(`Дата отгрузки: ${shipment.shipmentDate || '—'}   ·   паллет: ${data.pallets.length}`, M, y + 70);
+      y += 110;
+    }
+    for (const ln of pageLines) {
+      if (ln.kind === 'gap') { y += LineH; continue; }
+      y += LineH;
+      if (ln.kind === 'h2') {
+        ctx.font = PZR.font('bold', 22); ctx.fillStyle = '#2A2C2F'; ctx.fillText(ln.text, M, y - 8);
+      } else if (ln.kind === 'text') {
+        ctx.font = PZR.font('bold', 18); ctx.fillStyle = OK; ctx.fillText(ln.text, M, y - 8);
+      } else {
+        ctx.font = PZR.font('bold', ln.kind === 'th' ? 15 : 18);
+        for (const cell of ln.cells) { ctx.fillStyle = cell.c; ctx.fillText(cell.t, M + cell.x, y - 8); }
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(W - M, y); ctx.stroke();
+      }
+    }
+    return canvas;
+  });
+};
 
 function drawComposition(ctx, r, scene) {
   ctx.font = PZR.font('bold', 16); ctx.fillStyle = '#2A2C2F'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -1957,23 +2049,42 @@ function drawComposition(ctx, r, scene) {
 // Документ — плоский набор строк (rows) с назначением каждой либо в пул (не распределено),
 // либо в конкретную шеренгу конкретной паллеты. По умолчанию порядок ВНУТРИ шеренги считается
 // автоматически (дугой по возрастанию высоты) — это подтверждённое бизнес-правило. Но
-// doc.autoSort можно выключить (переключатель в UI) — тогда порядок внутри шеренги берётся
-// строго из массива lane (можно двигать перетаскиванием карточка-на-карточку).
+// p.autoSort можно выключить (переключатель в UI, свой для каждой паллеты) — тогда порядок
+// внутри шеренг этой паллеты берётся строго из массива lane (можно двигать перетаскиванием
+// карточка-на-карточку).
 const PZE = {};
+
+const PZE_EPS = 1e-6;
+PZE.newPallet = (fresh) => ({ lanes: [[], []], autoSort: true, fresh: fresh !== false });
 
 PZE.createDoc = function (mergedRows) {
   const rows = {};
   for (const r of mergedRows) rows[r.id] = r;
-  return { rows, pool: mergedRows.map((r) => r.id), pallets: [{ lanes: [[], []] }], autoSort: true };
+  return { rows, pool: mergedRows.map((r) => r.id), pallets: [PZE.newPallet(true)] };
 };
 
-PZE.addPallet = function (doc) { doc.pallets.push({ lanes: [[], []] }); };
+PZE.addPallet = function (doc) { doc.pallets.push(PZE.newPallet(true)); };
 
 PZE.removePallet = function (doc, idx) {
   const p = doc.pallets[idx];
   if (!p) return;
   for (const lane of p.lanes) doc.pool.push(...lane);
   doc.pallets.splice(idx, 1);
+};
+
+// Паллета, из которой ушла последняя строка, удаляется сама; пустая «свежая» (только что
+// созданная кнопкой/при загрузке) живёт, пока в неё что-то не положат. Возвращает true,
+// если набор паллет изменился.
+PZE.normalize = function (doc) {
+  let changed = false;
+  doc.pallets = doc.pallets.filter((p) => {
+    const nonEmpty = p.lanes.some((l) => l.length > 0);
+    if (nonEmpty) { p.fresh = false; return true; }
+    if (p.fresh) return true;
+    changed = true;
+    return false;
+  });
+  return changed;
 };
 
 PZE.locate = function (doc, id) {
@@ -2010,27 +2121,95 @@ PZE.moveToPosition = function (doc, id, dest, beforeId, after) {
   lane.splice(idx, 0, id);
 };
 
-// Разбивает строку на две — новая часть получает splitQty штук и остаётся рядом
-// (в той же шеренге/пуле), исходная теряет эти штуки. Возвращает id новой строки.
+// Копия строки (габариты, базовые габариты, поворот, вес) с другим количеством.
+PZE.cloneRow = function (row, qty) {
+  return PZ.makeArticle({
+    article: row.article, qty, lengthCm: row.lengthCm, widthCm: row.widthCm, heightCm: row.heightCm,
+    weightPerBoxKg: row.weightPerBoxKg, baseL: row.baseL, baseW: row.baseW, baseH: row.baseH, perm: row.perm,
+  });
+};
+
+// Вставляет newId сразу после afterId в том же контейнере (шеренга/пул).
+PZE.insertAfter = function (doc, afterId, newId) {
+  const loc = PZE.locate(doc, afterId);
+  const arr = loc && loc.where === 'lane' ? doc.pallets[loc.pi].lanes[loc.li] : doc.pool;
+  const idx = arr.indexOf(afterId);
+  if (idx === -1) arr.push(newId); else arr.splice(idx + 1, 0, newId);
+};
+
+// Разбивает строку на две — новая часть получает splitQty штук и встаёт сразу после
+// исходной (в той же шеренге/пуле), исходная теряет эти штуки. Возвращает id новой строки.
 PZE.splitRow = function (doc, id, splitQty) {
   const row = doc.rows[id];
   if (!row || !Number.isFinite(splitQty) || splitQty <= 0 || splitQty >= row.qty) return null;
-  const newRow = PZ.makeArticle({
-    article: row.article, qty: splitQty, lengthCm: row.lengthCm, widthCm: row.widthCm,
-    heightCm: row.heightCm, weightPerBoxKg: row.weightPerBoxKg,
-  });
+  const newRow = PZE.cloneRow(row, splitQty);
   row.qty -= splitQty;
   doc.rows[newRow.id] = newRow;
-  const loc = PZE.locate(doc, id);
-  if (loc) { if (loc.where === 'pool') doc.pool.push(newRow.id); else doc.pallets[loc.pi].lanes[loc.li].push(newRow.id); }
-  else doc.pool.push(newRow.id);
+  PZE.insertAfter(doc, id, newRow.id);
   return newRow.id;
 };
 
-PZE.swapLengthHeight = function (doc, id) {
+// ---- Ориентация короба ----
+// Оси: 0 = длина, 1 = ширина, 2 = высота. Поворот — свойство одной строки (столбика).
+const PZE_AXES = ['lengthCm', 'widthCm', 'heightCm'];
+const PZE_BASE = ['baseL', 'baseW', 'baseH'];
+
+PZE.recomputeCurrent = function (row) {
+  for (let i = 0; i < 3; i++) row[PZE_AXES[i]] = row[PZE_BASE[row.perm[i]]];
+};
+
+PZE.swapAxes = function (doc, id, i, j) {
   const row = doc.rows[id];
   if (!row) return;
-  const l = row.lengthCm; row.lengthCm = row.heightCm; row.heightCm = l;
+  const t = row[PZE_AXES[i]]; row[PZE_AXES[i]] = row[PZE_AXES[j]]; row[PZE_AXES[j]] = t;
+  const p = row.perm[i]; row.perm[i] = row.perm[j]; row.perm[j] = p;
+};
+
+PZE.isRotated = function (row) {
+  for (let i = 0; i < 3; i++) if (Math.abs(row[PZE_AXES[i]] - row[PZE_BASE[i]]) > PZE_EPS) return true;
+  return false;
+};
+
+// Снять «повёрнут»: вернуть габариты этой строки к справочным.
+PZE.resetRotation = function (doc, id) {
+  const row = doc.rows[id];
+  if (!row) return;
+  row.perm = [0, 1, 2];
+  PZE.recomputeCurrent(row);
+};
+
+const sameArticle = (a, b) => PZ.normArticle(a.article) === PZ.normArticle(b.article);
+const sameDims = (a, b) => PZE_AXES.every((k) => Math.abs(a[k] - b[k]) <= PZE_EPS);
+
+// Есть ли у артикула другие строки в иной ориентации (тогда уместна кнопка «ко всем»).
+PZE.hasOtherOrientation = function (doc, id) {
+  const row = doc.rows[id];
+  if (!row) return false;
+  return Object.values(doc.rows).some((r) => r.id !== id && sameArticle(r, row) && !sameDims(r, row));
+};
+
+// «Ко всем»: ориентация этой строки применяется ко всем строкам артикула.
+PZE.applyOrientationToArticle = function (doc, id) {
+  const row = doc.rows[id];
+  if (!row) return;
+  for (const r of Object.values(doc.rows)) {
+    if (r.id === id || !sameArticle(r, row)) continue;
+    r.perm = row.perm.slice();
+    PZE.recomputeCurrent(r);
+  }
+};
+
+// Ручной ввод габарита — исправление данных артикула: правится соответствующая базовая
+// ось у ВСЕХ строк артикула (с учётом поворота каждой), текущие габариты пересчитываются.
+PZE.setBaseFromCurrent = function (doc, id, axis, value) {
+  const row = doc.rows[id];
+  if (!row) return;
+  const k = row.perm[axis];
+  for (const r of Object.values(doc.rows)) {
+    if (!sameArticle(r, row)) continue;
+    r[PZE_BASE[k]] = value;
+    PZE.recomputeCurrent(r);
+  }
 };
 
 PZE.removeRow = function (doc, id) {
@@ -2053,7 +2232,7 @@ PZE.adjustQty = function (doc, id, newQty, mode) {
   if (delta === 0) return row.qty;
 
   const isInPool = (r) => doc.pool.includes(r.id);
-  const counterparts = Object.values(doc.rows).filter((r) => r.id !== id && r.article === row.article);
+  const counterparts = Object.values(doc.rows).filter((r) => r.id !== id && sameArticle(r, row));
   const prioritized = mode === 'lane'
     ? [...counterparts.filter((r) => !isInPool(r)), ...counterparts.filter((r) => isInPool(r))]
     : [...counterparts.filter((r) => isInPool(r)), ...counterparts.filter((r) => !isInPool(r))];
@@ -2069,12 +2248,9 @@ PZE.adjustQty = function (doc, id, newQty, mode) {
     }
     row.qty += (delta - need);
   } else {
-    let target = prioritized[0];
+    let target = mode === 'lane' ? prioritized[0] : prioritized.find((r) => isInPool(r));
     if (!target) {
-      target = PZ.makeArticle({
-        article: row.article, qty: 0, lengthCm: row.lengthCm, widthCm: row.widthCm,
-        heightCm: row.heightCm, weightPerBoxKg: row.weightPerBoxKg,
-      });
+      target = PZE.cloneRow(row, 0);
       doc.rows[target.id] = target;
       doc.pool.push(target.id);
     }
@@ -2084,23 +2260,215 @@ PZE.adjustQty = function (doc, id, newQty, mode) {
   return row.qty;
 };
 
-// Собирает doc в структуру, которую понимают уже существующие PZ.buildScene/PZR —
-// пустые шеренги допустимы (buildScene просто не даёт для них колонок), поэтому
-// лэйны НЕ фильтруются — иначе индекс шеренги (чёт/нечет = прижим сверху/снизу) съедет.
-PZE.buildPalletsForRender = function (doc) {
-  return doc.pallets.map((p, idx) => ({
-    index: idx,
-    groups: p.lanes.map((laneIds) => ({ articles: laneIds.map((id) => doc.rows[id]).filter(Boolean) })),
-  }));
+// ---- Склейка ----
+// Другие строки той же шеренги с тем же артикулом и теми же текущими габаритами.
+PZE.glueCandidates = function (doc, id) {
+  const loc = PZE.locate(doc, id);
+  const row = doc.rows[id];
+  if (!loc || loc.where !== 'lane' || !row) return [];
+  return doc.pallets[loc.pi].lanes[loc.li].filter((x) => x !== id && doc.rows[x] && sameArticle(doc.rows[x], row) && sameDims(doc.rows[x], row));
+};
+
+PZE.glueRows = function (doc, id) {
+  const cands = PZE.glueCandidates(doc, id);
+  const row = doc.rows[id];
+  for (const cid of cands) { row.qty += doc.rows[cid].qty; PZE.removeRow(doc, cid); }
+  return cands.length;
+};
+
+// ---- Проверки паллеты (единый источник для предупреждений, подтверждений, сводки) ----
+// config: {pallet:{lengthMm,widthMm}, maxHeightCm}.
+PZE.checkPallet = function (doc, pi, config) {
+  const p = doc.pallets[pi];
+  const L = config.pallet.lengthMm / 10, W = config.pallet.widthMm / 10;
+  const limit = config.maxHeightCm || 200;
+  const out = { laneLengths: [], overhangLanes: [], wideRows: [], maxHeightCm: 0, tooHigh: false, weightKg: 0, boxes: 0, columns: 0, limitCm: limit, palletLengthCm: L };
+  let maxStack = 0;
+  p.lanes.forEach((ids, li) => {
+    let len = 0;
+    for (const id of ids) {
+      const r = doc.rows[id];
+      if (!r) continue;
+      len += r.lengthCm;
+      out.columns++;
+      out.boxes += r.qty;
+      out.weightKg += r.stackWeightKg;
+      maxStack = Math.max(maxStack, r.stackHeightCm);
+      if (r.widthCm > W / 2 + PZE_EPS) out.wideRows.push(id);
+    }
+    out.laneLengths.push(len);
+    if (len > L + PZE_EPS) out.overhangLanes.push(li);
+  });
+  out.maxHeightCm = out.columns > 0 ? maxStack + PalletHeightCm : 0;
+  out.tooHigh = out.maxHeightCm > limit + PZE_EPS;
+  return out;
+};
+
+// Снимок проблем всех паллет (ключ — сам объект паллеты, переживает смену индексов).
+PZE.problemSnapshot = function (doc, config) {
+  const snap = new Map();
+  doc.pallets.forEach((p, pi) => {
+    const c = PZE.checkPallet(doc, pi, config);
+    snap.set(p, { lens: c.laneLengths, height: c.maxHeightCm, wide: new Set(c.wideRows) });
+  });
+  return snap;
+};
+
+// Новые/усугубившиеся проблемы относительно снимка «до» — тексты для подтверждения.
+PZE.newProblems = function (doc, config, before) {
+  const msgs = [];
+  const r1 = (v) => Math.round(v * 10) / 10;
+  doc.pallets.forEach((p, pi) => {
+    const c = PZE.checkPallet(doc, pi, config);
+    const b = before.get(p) || { lens: [], height: 0, wide: new Set() };
+    c.laneLengths.forEach((len, li) => {
+      if (len > c.palletLengthCm + PZE_EPS && len > (b.lens[li] || 0) + PZE_EPS) {
+        msgs.push(`Шеренга ${li + 1} паллеты ${pi + 1} станет ${r1(len)} см при длине паллеты ${r1(c.palletLengthCm)} см (свес ${r1(len - c.palletLengthCm)} см).`);
+      }
+    });
+    for (const id of c.wideRows) {
+      if (!b.wide.has(id)) {
+        const r = doc.rows[id];
+        msgs.push(`Короб «${r.article}» на паллете ${pi + 1} шире половины паллеты (${r1(r.widthCm)} см).`);
+      }
+    }
+    if (c.tooHigh && c.maxHeightCm > b.height + PZE_EPS) {
+      msgs.push(`Паллета ${pi + 1} станет высотой ${r1(c.maxHeightCm)} см с поддоном при лимите ${r1(c.limitCm)} см.`);
+    }
+  });
+  return msgs;
+};
+
+// ---- Предварительная автораскладка ----
+// Порог деления: высоты по убыванию h1 ≥ … ≥ hn; среди первых max(1, floor(n/3)) разрывов
+// (h_k − h_{k+1}) берётся наибольший; если он ≥ 30 см — делятся строки 1…k, то есть всё
+// выше h_{k+1}. Возвращает порог (делить столбики выше него) или null — делить нечего.
+PZE.autoSplitThreshold = function (heights) {
+  const h = heights.slice().sort((a, b) => b - a);
+  const n = h.length;
+  if (n < 2) return null;
+  const m = Math.min(n - 1, Math.max(1, Math.floor(n / 3)));
+  let best = -1, bestGap = -Infinity;
+  for (let k = 0; k < m; k++) {
+    const gap = h[k] - h[k + 1];
+    if (gap > bestGap) { bestGap = gap; best = k; }
+  }
+  return bestGap >= 30 ? h[best + 1] : null;
+};
+
+// Раскладывает только то, что в пуле. thresholdCm — порог деления (null = авто).
+// Свеса не делает никогда; строки, не влезающие даже на пустую паллету, остаются в пуле.
+PZE.autoLayout = function (doc, config, thresholdCm) {
+  const L = config.pallet.lengthMm / 10, W = config.pallet.widthMm / 10;
+  const stackLimit = (config.maxHeightCm || 200) - PalletHeightCm;
+  const res = { placed: 0, unplaced: [], splitCount: 0, newPallets: 0 };
+
+  const thr = thresholdCm != null ? thresholdCm : PZE.autoSplitThreshold(doc.pool.map((id) => doc.rows[id].stackHeightCm));
+  if (thr != null) {
+    for (const id of doc.pool.slice()) {
+      const row = doc.rows[id];
+      if (row && row.stackHeightCm > thr + PZE_EPS && row.qty >= 2) {
+        if (PZE.splitRow(doc, id, Math.floor(row.qty / 2))) res.splitCount++;
+      }
+    }
+  }
+
+  const items = doc.pool.map((id) => doc.rows[id]).filter(Boolean)
+    .sort((a, b) => b.stackHeightCm - a.stackHeightCm);
+
+  const stateOf = (p) => {
+    const lens = p.lanes.map((ids) => ids.reduce((s, id) => s + (doc.rows[id] ? doc.rows[id].lengthCm : 0), 0));
+    const maxStack = Math.max(0, ...p.lanes.flat().map((id) => (doc.rows[id] ? doc.rows[id].stackHeightCm : 0)));
+    return { lens, maxStack };
+  };
+  const states = new Map(doc.pallets.map((p) => [p, stateOf(p)]));
+
+  const tryPlace = (p, row) => {
+    const st = states.get(p);
+    if (Math.max(st.maxStack, row.stackHeightCm) > stackLimit + PZE_EPS) return false;
+    const order = st.lens[0] <= st.lens[1] ? [0, 1] : [1, 0];
+    for (const li of order) {
+      if (st.lens[li] + row.lengthCm <= L + PZE_EPS) {
+        PZE.moveTo(doc, row.id, { where: 'lane', pi: doc.pallets.indexOf(p), li });
+        st.lens[li] += row.lengthCm;
+        st.maxStack = Math.max(st.maxStack, row.stackHeightCm);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  for (const row of items) {
+    if (row.widthCm > W / 2 + PZE_EPS || row.lengthCm > L + PZE_EPS || row.stackHeightCm > stackLimit + PZE_EPS) {
+      res.unplaced.push(row.id);
+      continue;
+    }
+    let done = false;
+    for (const p of doc.pallets) { if (tryPlace(p, row)) { done = true; break; } }
+    if (!done) {
+      PZE.addPallet(doc);
+      const np = doc.pallets[doc.pallets.length - 1];
+      states.set(np, { lens: [0, 0], maxStack: 0 });
+      res.newPallets++;
+      tryPlace(np, row);
+    }
+    res.placed++;
+  }
+  for (const p of doc.pallets) if (p.lanes.some((l) => l.length)) p.fresh = false;
+  return res;
+};
+
+// ---- Сборка для рендера ----
+// Пустые шеренги допустимы (buildScene просто не даёт для них колонок), поэтому лэйны
+// НЕ фильтруются — иначе индекс шеренги (чёт/нечет = прижим сверху/снизу) съедет.
+// opts.skipEmpty — пустые паллеты не попадают (нумерация идёт заново); srcIndex — индекс в doc.
+PZE.buildPalletsForRender = function (doc, opts) {
+  const skipEmpty = !!(opts && opts.skipEmpty);
+  const out = [];
+  doc.pallets.forEach((p, srcIndex) => {
+    if (skipEmpty && !p.lanes.some((l) => l.length)) return;
+    out.push({
+      index: out.length, srcIndex,
+      groups: p.lanes.map((laneIds) => ({ articles: laneIds.map((id) => doc.rows[id]).filter(Boolean) })),
+    });
+  });
+  return out;
+};
+
+// Данные для сводной страницы PDF (только непустые паллеты, нумерация как на карточках).
+PZE.summaryData = function (doc, config, missing) {
+  const pallets = [];
+  doc.pallets.forEach((p, pi) => {
+    if (!p.lanes.some((l) => l.length)) return;
+    const c = PZE.checkPallet(doc, pi, config);
+    pallets.push({
+      index: pallets.length, columns: c.columns, boxes: c.boxes, weightKg: c.weightKg,
+      heightCm: c.maxHeightCm, tooHigh: c.tooHigh,
+      lanes: c.laneLengths.map((len, li) => ({ len, over: c.overhangLanes.includes(li) })),
+    });
+  });
+  const byArt = new Map();
+  for (const r of Object.values(doc.rows)) {
+    const key = PZ.normArticle(r.article);
+    const a = byArt.get(key) || { article: r.article, total: 0, placed: 0, pool: 0 };
+    a.total += r.qty;
+    if (doc.pool.includes(r.id)) a.pool += r.qty; else a.placed += r.qty;
+    byArt.set(key, a);
+  }
+  const articles = [...byArt.values()].sort((a, b) => a.article.localeCompare(b.article));
+  return { pallets, articles, missing: missing || [] };
 };
 
 PZE.serializeDoc = function (doc) {
   const rows = {};
   for (const id in doc.rows) {
     const r = doc.rows[id];
-    rows[id] = { id: r.id, article: r.article, qty: r.qty, lengthCm: r.lengthCm, widthCm: r.widthCm, heightCm: r.heightCm, weightPerBoxKg: r.weightPerBoxKg };
+    rows[id] = {
+      id: r.id, article: r.article, qty: r.qty, lengthCm: r.lengthCm, widthCm: r.widthCm, heightCm: r.heightCm,
+      weightPerBoxKg: r.weightPerBoxKg, baseL: r.baseL, baseW: r.baseW, baseH: r.baseH, perm: r.perm,
+    };
   }
-  return JSON.stringify({ rows, pool: doc.pool, pallets: doc.pallets, autoSort: doc.autoSort !== false });
+  return JSON.stringify({ rows, pool: doc.pool, pallets: doc.pallets });
 };
 
 PZE.deserializeDoc = function (json) {
@@ -2108,13 +2476,18 @@ PZE.deserializeDoc = function (json) {
   const rows = {};
   for (const id in raw.rows) {
     PZ.bumpIdCounter(id);
-    rows[id] = PZ.makeArticle(raw.rows[id]);
+    rows[id] = PZ.makeArticle(raw.rows[id]); // у старых черновиков base* = текущим
   }
-  return {
-    rows, pool: raw.pool || [],
-    pallets: raw.pallets && raw.pallets.length ? raw.pallets : [{ lanes: [[], []] }],
-    autoSort: raw.autoSort !== false,
-  };
+  // Черновики из старых версий хранили autoSort общим на весь документ (raw.autoSort) —
+  // при чтении такого файла разносим то же значение по всем паллетам, дальше каждая
+  // переключается независимо.
+  const legacyAutoSort = raw.autoSort !== false;
+  const pallets = raw.pallets && raw.pallets.length ? raw.pallets : [{ lanes: [[], []] }];
+  pallets.forEach((p) => {
+    if (p.autoSort === undefined) p.autoSort = legacyAutoSort;
+    if (p.fresh === undefined) p.fresh = !p.lanes.some((l) => l.length);
+  });
+  return { rows, pool: raw.pool || [], pallets };
 };
 </script>
 <script>
@@ -2131,6 +2504,9 @@ PZE.deserializeDoc = function (json) {
     shipment: { orderNumber: '', shipmentDate: '' },
     fileName: '',
     lookupMap: null,
+    lookupWarning: '',
+    missing: [], // [{article, qty}] — артикулы заказа, не найденные в справочнике при загрузке
+    summary: null,
     activeHistoryId: null,
     initialDocPayload: null, // сериализованное состояние сразу после загрузки заказа — для «Сбросить изменения»
   };
@@ -2179,8 +2555,8 @@ PZE.deserializeDoc = function (json) {
       return r ? [id, r.qty, r.lengthCm, r.widthCm, r.heightCm, r.weightPerBoxKg].join(':') : id;
     }).join('|');
     return JSON.stringify({
-      lanes: p.lanes, rowsPart, autoSort: doc.autoSort,
-      len: state.config.pallet.lengthMm, wid: state.config.pallet.widthMm,
+      lanes: p.lanes, rowsPart, autoSort: p.autoSort,
+      len: state.config.pallet.lengthMm, wid: state.config.pallet.widthMm, maxH: state.config.maxHeightCm,
       order: state.shipment.orderNumber, date: state.shipment.shipmentDate,
     });
   }
@@ -2197,8 +2573,32 @@ PZE.deserializeDoc = function (json) {
   function loadHistory() {
     try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
   }
+  // Запись истории не должна падать молча: при переполнении localStorage сначала чистим
+  // кэш справочника, затем выкидываем самые старые записи (кроме активной); если и это не
+  // помогло — заметное предупреждение, что черновик не сохраняется.
   function saveHistoryList(list) {
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) { /* не критично */ }
+    const warn = document.getElementById('storageWarning');
+    const tryWrite = (l) => { try { localStorage.setItem(HISTORY_KEY, JSON.stringify(l)); return true; } catch (e) { return false; } };
+    let ok = tryWrite(list);
+    if (!ok) {
+      try { localStorage.removeItem('pz-lookup-cache'); } catch (e) { /* игнор */ }
+      ok = tryWrite(list);
+    }
+    if (!ok) {
+      const l = list.slice().sort((a, b) => b.updatedAt - a.updatedAt);
+      while (!ok) {
+        let idx = -1;
+        for (let i = l.length - 1; i >= 0; i--) if (l[i].id !== state.activeHistoryId) { idx = i; break; }
+        if (idx === -1) break;
+        l.splice(idx, 1);
+        ok = tryWrite(l);
+      }
+    }
+    if (warn) {
+      warn.hidden = ok;
+      if (!ok) warn.textContent = 'Черновик не сохраняется: в браузере не хватает места для хранения. Скачайте результат (Excel/PDF) или «Черновик JSON», не закрывая страницу.';
+    }
+    return ok;
   }
   function upsertHistory(entry) {
     const list = loadHistory().filter((e) => e.id !== entry.id);
@@ -2234,6 +2634,8 @@ PZE.deserializeDoc = function (json) {
     grip: '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="8" cy="6" r="1.7"/><circle cx="16" cy="6" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="18" r="1.7"/><circle cx="16" cy="18" r="1.7"/></svg>',
     swap: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
     split: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><line x1="20" y1="4" x2="8.5" y2="15.5"/><line x1="14.5" y1="14.5" x2="20" y2="20"/><line x1="8.5" y1="8.5" x2="12" y2="12"/></svg>',
+    arrows: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 7 2 12 7 17"/><polyline points="17 7 22 12 17 17"/><line x1="3" y1="12" x2="21" y2="12"/></svg>',
+    glue: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 3 12 8 17 3"/><polyline points="7 21 12 16 17 21"/><line x1="12" y1="8" x2="12" y2="16"/></svg>',
     toPool: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>',
   };
   function iconBtn(cls, iconName, title) {
@@ -2256,6 +2658,7 @@ PZE.deserializeDoc = function (json) {
     row.appendChild(el('span', null, 'Кол-во'));
     row.appendChild(el('span', null, 'Д×Ш×В, см'));
     const ps = el('span', null, 'ПАЛЛЕТА/ШЕРЕНГА'); ps.title = 'Номер паллеты / номер шеренги'; row.appendChild(ps);
+    const rot = el('span', null, 'Поворот'); rot.title = 'Короб повёрнут относительно справочника'; row.appendChild(rot);
     row.appendChild(el('span', null, 'Действия'));
     return row;
   }
@@ -2279,7 +2682,8 @@ PZE.deserializeDoc = function (json) {
 
   const inLength = $('#cfgLength');
   const inWidth = $('#cfgWidth');
-  const inBlocksPerPallet = $('#cfgBlocksPerPallet');
+  const inMaxHeight = $('#cfgMaxHeight');
+  const inSplitThreshold = $('#cfgSplitThreshold');
   const inOrderNumber = $('#shipOrderNumber');
   const inShipDate = $('#shipDate');
   const inLookupUrl = $('#cfgLookupUrl');
@@ -2288,11 +2692,41 @@ PZE.deserializeDoc = function (json) {
     errorBox.textContent = msg;
     errorBox.hidden = !msg;
   }
+  function showInfo(msg) {
+    const box = $('#infoBox');
+    box.textContent = msg;
+    box.hidden = !msg;
+  }
+
+  // ---------- Настройки (сохраняются между сеансами) ----------
+  const SETTINGS_KEY = 'pz-settings';
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        lengthMm: inLength.value, widthMm: inWidth.value, lookupUrl: inLookupUrl.value,
+        maxHeightCm: inMaxHeight.value, splitThresholdCm: inSplitThreshold.value,
+      }));
+    } catch (e) { /* не критично */ }
+  }
+  (function loadSettings() {
+    try {
+      const st = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+      if (!st) return;
+      if (st.lengthMm) inLength.value = st.lengthMm;
+      if (st.widthMm) inWidth.value = st.widthMm;
+      if (st.lookupUrl) inLookupUrl.value = st.lookupUrl;
+      if (st.maxHeightCm) inMaxHeight.value = st.maxHeightCm;
+      if (st.splitThresholdCm !== undefined) inSplitThreshold.value = st.splitThresholdCm;
+    } catch (e) { /* не критично */ }
+  })();
 
   function readConfigFromUI() {
     state.config.pallet.lengthMm = Math.max(100, parseInt(inLength.value, 10) || 1200);
     state.config.pallet.widthMm = Math.max(100, parseInt(inWidth.value, 10) || 800);
-    state.config.blocksPerPallet = Math.max(1, parseInt(inBlocksPerPallet.value, 10) || 2);
+    const mh = PZ.parseNum(inMaxHeight.value);
+    state.config.maxHeightCm = mh > PalletHeightCm ? mh : 200;
+    const th = PZ.parseNum(inSplitThreshold.value);
+    state.config.splitThresholdCm = Number.isFinite(th) && th > 0 ? th : null;
     state.shipment.orderNumber = inOrderNumber.value.trim();
     state.shipment.shipmentDate = formatDateRu(inShipDate.value);
   }
@@ -2309,9 +2743,12 @@ PZE.deserializeDoc = function (json) {
   function buildCardsFromEditor() {
     if (!editorDoc) return;
     try {
-      state.pallets = PZE.buildPalletsForRender(editorDoc);
-      const manualOrder = !editorDoc.autoSort;
-      state.scenes = state.pallets.map((p) => PZ.buildScene(p, state.config, `Паллета ${p.index + 1}`, { manualOrder }));
+      // Пустые паллеты в карточки не попадают (нумерация идёт заново).
+      state.pallets = PZE.buildPalletsForRender(editorDoc, { skipEmpty: true });
+      if (state.pallets.length === 0) { showError('Нет паллет с раскладкой — нечего строить.'); return; }
+      state.scenes = state.pallets.map((p) => PZ.buildScene(p, state.config, `Паллета ${p.index + 1}`,
+        { manualOrder: !editorDoc.pallets[p.srcIndex].autoSort }));
+      state.summary = PZE.summaryData(editorDoc, state.config, currentMissing());
       renderCards();
       showError('');
     } catch (e) {
@@ -2374,7 +2811,10 @@ PZE.deserializeDoc = function (json) {
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
 
-    state.cards.forEach(({ canvas }, i) => {
+    // Первой идёт сводная страница (паллеты + сверка по артикулам).
+    const summaryPages = state.summary ? PZR.composeSummary(state.summary, state.shipment) : [];
+    const pageCanvases = [...summaryPages, ...state.cards.map((c) => c.canvas)];
+    pageCanvases.forEach((canvas, i) => {
       if (i > 0) doc.addPage('a4', 'landscape');
       const scale = Math.min(pageW / canvas.width, pageH / canvas.height);
       const w = canvas.width * scale, h = canvas.height * scale;
@@ -2396,24 +2836,21 @@ PZE.deserializeDoc = function (json) {
   }
 
   // ---------- Выгрузка распределения в Excel ----------
-  // Тот же формат, что и в «раскладка - Заказ *.xlsx» — при желании такой файл можно
-  // загрузить обратно в это же приложение (это уже готовая раскладка, парсер её узнает).
-  // Строки идут в том же порядке, в котором короба реально легли на карточке (авто-дуга
+  // Это выгрузка для печати/архива: приложение такие файлы обратно не загружает (раскладка
+  // всегда собирается заново из исходного заказа). Строки идут в том же порядке, в котором короба реально легли на карточке (авто-дуга
   // или ручной порядок — как сейчас выставлено), шеренги разделены пустой строкой.
   function scenesForExport() {
     if (editorDoc && !editorSection.hidden) {
       readConfigFromUI();
-      const pallets = PZE.buildPalletsForRender(editorDoc);
-      const manualOrder = !editorDoc.autoSort;
-      return pallets.map((p) => PZ.buildScene(p, state.config, `Паллета ${p.index + 1}`, { manualOrder }));
+      const pallets = PZE.buildPalletsForRender(editorDoc, { skipEmpty: true });
+      return pallets.map((p) => PZ.buildScene(p, state.config, `Паллета ${p.index + 1}`,
+        { manualOrder: !editorDoc.pallets[p.srcIndex].autoSort }));
     }
     return state.scenes;
   }
 
   // Границы и жирная шапка — то, что SheetJS (community-сборка, без Pro) не умеет
-  // писать при экспорте, поэтому здесь именно ExcelJS. Это просто выгрузка для печати/
-  // архива — приложение больше не умеет загружать такой файл обратно (раскладка всегда
-  // собирается заново из исходного заказа).
+  // писать при экспорте, поэтому здесь именно ExcelJS.
   async function exportExcel() {
     const scenes = scenesForExport();
     if (!scenes || scenes.length === 0) { showError('Нечего выгружать — сначала загрузите файл.'); return; }
@@ -2459,37 +2896,48 @@ PZE.deserializeDoc = function (json) {
   $('#exportExcelEditorBtn').addEventListener('click', exportExcel);
 
   // ---------- Справочник габаритов (Google Sheets, TSV) ----------
-  async function fetchLookup(url, force) {
-    if (!force) {
+  // Всегда качаем свежий TSV; сохранённая копия — только запасной вариант при ошибке сети
+  // (с предупреждением в state.lookupWarning).
+  async function fetchLookup(url) {
+    state.lookupWarning = '';
+    const fallback = (why) => {
       try {
         const cached = JSON.parse(localStorage.getItem('pz-lookup-cache') || 'null');
         if (cached && cached.url === url && cached.tsv) {
           state.lookupMap = PZ.parseLookupTsv(cached.tsv);
+          state.lookupWarning = `Справочник не загрузился, использована сохранённая копия от ${formatHistoryDate(cached.fetchedAt)}.`;
           return state.lookupMap;
         }
-      } catch (e) { /* игнор — просто перезагрузим */ }
-    }
+      } catch (e) { /* копии нет или она битая */ }
+      throw new Error(why);
+    };
     let resp;
     try {
       resp = await fetch(url);
     } catch (e) {
       if (location.protocol === 'file:') {
-        throw new Error('Браузер блокирует загрузку справочника при открытии файла двойным кликом (file://) — так устроена защита от кросс-доменных запросов. Откройте приложение по обычной ссылке (например, опубликованную страницу), там это работает. Готовые раскладки (файлы с габаритами) при этом продолжают работать офлайн как обычно.');
+        return fallback('Браузер блокирует загрузку справочника при открытии файла двойным кликом (file://) — так устроена защита от кросс-доменных запросов. Откройте приложение по обычной ссылке (например, опубликованную страницу), там это работает.');
       }
-      throw new Error('Не удалось загрузить справочник — проверьте интернет-соединение и ссылку. (' + e.message + ')');
+      return fallback('Не удалось загрузить справочник — проверьте интернет-соединение и ссылку. (' + e.message + ')');
     }
-    if (!resp.ok) throw new Error(`Не удалось загрузить справочник (HTTP ${resp.status}). Проверьте, что таблица открыта «по ссылке — читатель», и что ссылка ведёт на export?format=tsv.`);
+    if (!resp.ok) return fallback(`Не удалось загрузить справочник (HTTP ${resp.status}). Проверьте, что таблица открыта «по ссылке — читатель», и что ссылка ведёт на export?format=tsv.`);
     const tsv = await resp.text();
-    const map = PZ.parseLookupTsv(tsv);
+    let map;
+    try {
+      if (/^\s*</.test(tsv)) throw new Error('ответ — HTML-страница');
+      map = PZ.parseLookupTsv(tsv);
+    } catch (e) {
+      return fallback('По ссылке пришла не таблица-справочник. Проверьте, что доступ — «по ссылке, читатель», а ссылка ведёт на export?format=tsv. (' + e.message + ')');
+    }
     state.lookupMap = map;
     try { localStorage.setItem('pz-lookup-cache', JSON.stringify({ url, tsv, fetchedAt: Date.now() })); } catch (e) { /* не критично */ }
     return map;
   }
 
-  async function ensureLookup(force) {
+  async function ensureLookup() {
     const url = inLookupUrl.value.trim();
     if (!url) throw new Error('Укажите ссылку на таблицу-справочник в настройках.');
-    return fetchLookup(url, force);
+    return fetchLookup(url);
   }
 
   // ---------- Редактор раскладки (заказ + справочник → ручная сборка) ----------
@@ -2500,6 +2948,8 @@ PZE.deserializeDoc = function (json) {
         id: state.activeHistoryId, fileName: state.fileName, type: 'order',
         updatedAt: Date.now(), payload: PZE.serializeDoc(editorDoc),
         initialPayload: state.initialDocPayload,
+        orderNumber: inOrderNumber.value.trim(), shipmentDate: inShipDate.value,
+        missing: state.missing,
       });
     } catch (e) { /* не критично */ }
   }
@@ -2509,22 +2959,24 @@ PZE.deserializeDoc = function (json) {
     renderEditor();
   }
 
-  // Строка-чип на одну позицию заказа. Раньше это была карточка-квадрат с выпадающим
-  // списком «Паллета N · Шеренга L» на десятки пунктов — на большом заказе выбор в нём
-  // был медленным. Теперь это компактная строка, а место назначения — два маленьких
-  // числовых поля «Паллета / Шеренга», куда можно просто вписать номер и уйти табом —
-  // без открытия и прокрутки списка. 0 в поле паллеты означает «в пул».
-  function chipEl(doc, id) {
+  // Строка-чип на одну позицию заказа. Компактная строка; место назначения — два
+  // маленьких числовых поля «Паллета / Шеренга», куда можно просто вписать номер и уйти
+  // Enter'ом — без открытия и прокрутки списка. 0 в поле паллеты означает «в пул».
+  // colorMap — цвета артикулов этой паллеты (PZ.assignColors); для пула null.
+  function chipEl(doc, id, colorMap) {
     const row = doc.rows[id];
     const chip = el('div', 'chip');
     chip.dataset.id = id;
 
-    // Красим строку в тот же цвет, что артикул получит на самой паллете (та же функция
-    // хэширования, что и в рендере) — так проще визуально сопоставить строку редактора
-    // с конкретным цветным коробом на карточке, не вчитываясь в код артикула.
-    const rowColor = PZ.colorForArticle(row.article);
+    // Красим строку в тот же цвет, что артикул получит на карточке паллеты — так проще
+    // сопоставить строку редактора с конкретным цветным коробом на превью.
+    const rowColor = (colorMap && colorMap.get(row.article)) || PZ.colorForArticle(row.article);
     chip.style.borderLeft = `5px solid ${PZ.css(rowColor)}`;
     chip.style.background = `rgba(${rowColor.r}, ${rowColor.g}, ${rowColor.b}, 0.14)`;
+    if (row.widthCm > state.config.pallet.widthMm / 20 + 1e-6) {
+      chip.classList.add('chipWide');
+      chip.title = 'Короб шире половины ширины паллеты';
+    }
 
     // Тянуть можно только за эту ручку, не за всю строку целиком: строка плотно набита
     // инпутами/кнопками, и клик по ним внутри draggable-контейнера перехватывает
@@ -2566,28 +3018,44 @@ PZE.deserializeDoc = function (json) {
     qtyField.appendChild(qtyInput); qtyField.appendChild(document.createTextNode(' шт'));
     chip.appendChild(qtyField);
 
+    // Д [↔] Ш [↔] В: стрелки меняют оси местами у ЭТОЙ строки (поворот столбика);
+    // ручной ввод числа — исправление данных артикула (у всех его строк).
     const dimsField = el('span', 'chipField chipDimsField');
     const lInput = mkNum('dimL', round1(row.lengthCm), 0.1, 0.1);
     const wInput = mkNum('dimW', round1(row.widthCm), 0.1, 0.1);
     const hInput = mkNum('dimH', round1(row.heightCm), 0.1, 0.1);
-    dimsField.appendChild(lInput); dimsField.appendChild(document.createTextNode('×'));
-    dimsField.appendChild(wInput); dimsField.appendChild(document.createTextNode('×'));
+    const arrowLW = iconBtn('chipArrow', 'arrows', 'Поменять местами длину и ширину этой строки');
+    const arrowWH = iconBtn('chipArrow', 'arrows', 'Поменять местами ширину и высоту этой строки');
+    dimsField.appendChild(lInput); dimsField.appendChild(arrowLW);
+    dimsField.appendChild(wInput); dimsField.appendChild(arrowWH);
     dimsField.appendChild(hInput); dimsField.appendChild(document.createTextNode(' см'));
     chip.appendChild(dimsField);
 
     qtyInput.addEventListener('change', () => {
-      pushUndo();
       const requested = Math.max(1, Math.round(parseFloat(qtyInput.value) || row.qty));
       const mode = $('#qtyOverflowMode').value;
-      const applied = PZE.adjustQty(doc, id, requested, mode);
-      showError(applied !== requested
-        ? `Недостаточно свободных коробов «${row.article}»: увеличено только до ${applied} шт (столько же в других строках этого артикула, забрать больше неоткуда). Общее число коробов по артикулу не может превышать заказанное.`
-        : '');
-      onDocChanged();
+      let applied = requested;
+      if (!applyAction(() => { applied = PZE.adjustQty(doc, id, requested, mode); })) return;
+      if (applied !== requested) {
+        showError(`Недостаточно свободных коробов «${row.article}»: увеличено только до ${applied} шт (столько же в других строках этого артикула, забрать больше неоткуда). Общее число коробов по артикулу не может превышать заказанное.`);
+      } else showError('');
     });
-    lInput.addEventListener('change', () => { pushUndo(); row.lengthCm = parseFloat(lInput.value) || row.lengthCm; onDocChanged(); });
-    wInput.addEventListener('change', () => { pushUndo(); row.widthCm = parseFloat(wInput.value) || row.widthCm; onDocChanged(); });
-    hInput.addEventListener('change', () => { pushUndo(); row.heightCm = parseFloat(hInput.value) || row.heightCm; onDocChanged(); });
+    const axisKeys = ['lengthCm', 'widthCm', 'heightCm'];
+    [lInput, wInput, hInput].forEach((input, axis) => {
+      input.addEventListener('change', () => {
+        const v = PZ.parseNum(input.value);
+        if (!(Number.isFinite(v) && v > 0)) {
+          input.value = round1(row[axisKeys[axis]]);
+          showError('Габарит должен быть числом больше 0.');
+          return;
+        }
+        showError('');
+        if (Math.abs(v - row[axisKeys[axis]]) < 1e-9) return;
+        applyAction(() => PZE.setBaseFromCurrent(doc, id, axis, v));
+      });
+    });
+    arrowLW.addEventListener('click', () => applyAction(() => PZE.swapAxes(doc, id, 0, 1)));
+    arrowWH.addEventListener('click', () => applyAction(() => PZE.swapAxes(doc, id, 1, 2)));
 
     // Быстрое назначение места: «Паллета / Шеренга» вместо выпадающего списка.
     const posField = el('span', 'chipField chipPositionField');
@@ -2597,7 +3065,7 @@ PZE.deserializeDoc = function (json) {
     // Для «не распределено» оба поля пустые — 0 в поле паллеты тоже означает пул.
     const posPallet = mkNum('posPallet', loc && loc.where === 'lane' ? loc.pi + 1 : '', 1, 0);
     posPallet.placeholder = 'П';
-    posPallet.title = 'Номер паллеты (0 — не распределено). Впишите и нажмите Enter';
+    posPallet.title = 'Номер паллеты (0 — не распределено; N+1 — новая паллета). Впишите и нажмите Enter';
     const posLane = mkNum('posLane', loc && loc.where === 'lane' ? loc.li + 1 : '', 1, 1);
     posLane.placeholder = 'Ш';
     posLane.max = 2;
@@ -2612,20 +3080,31 @@ PZE.deserializeDoc = function (json) {
       const lRaw = posLane.value.trim();
       const p = pRaw === '' ? NaN : Math.round(parseFloat(pRaw));
       if (!Number.isFinite(p) || p < 0) { showError('Впишите номер паллеты (0 — не распределено) и нажмите Enter.'); posPallet.focus(); return; }
+      if (p > doc.pallets.length + 1) {
+        showError(`Такой паллеты нет — можно указать до ${doc.pallets.length + 1}.`);
+        posPallet.focus();
+        return;
+      }
+      let l = 0;
       if (p > 0) {
-        const l = lRaw === '' ? NaN : Math.round(parseFloat(lRaw));
+        l = lRaw === '' ? NaN : Math.round(parseFloat(lRaw));
         if (!Number.isFinite(l) || l < 1 || l > 2) { showError('Впишите номер шеренги (1 или 2) и нажмите Enter.'); posLane.focus(); return; }
       }
       showError('');
-      pushUndo();
-      if (p === 0) {
-        PZE.moveTo(doc, id, { where: 'pool' });
-      } else {
-        while (doc.pallets.length < p) PZE.addPallet(doc);
-        PZE.moveTo(doc, id, { where: 'lane', pi: p - 1, li: Math.round(parseFloat(lRaw)) - 1 });
+      // Место не изменилось — ничего не делать (иначе moveTo переставит строку в конец шеренги).
+      const cur = PZE.locate(doc, id);
+      if (cur && (p === 0 ? cur.where === 'pool' : (cur.where === 'lane' && cur.pi === p - 1 && cur.li === l - 1))) {
+        renderEditor();
+        return;
       }
-      previewCache = {};
-      onDocChanged();
+      applyAction(() => {
+        if (p === 0) {
+          PZE.moveTo(doc, id, { where: 'pool' });
+        } else {
+          if (p === doc.pallets.length + 1) PZE.addPallet(doc);
+          PZE.moveTo(doc, id, { where: 'lane', pi: p - 1, li: l - 1 });
+        }
+      });
     }
     [posPallet, posLane].forEach((input) => {
       input.addEventListener('keydown', (e) => {
@@ -2635,10 +3114,30 @@ PZE.deserializeDoc = function (json) {
       });
     });
 
+    // Поворот: галочка видна, только если строка повёрнута относительно справочника.
+    const rotField = el('span', 'chipRotField');
+    const rotated = PZE.isRotated(row);
+    const rotCb = document.createElement('input');
+    rotCb.type = 'checkbox';
+    rotCb.checked = rotated;
+    rotCb.disabled = !rotated;
+    rotCb.style.visibility = rotated ? 'visible' : 'hidden';
+    rotCb.title = 'Короб повёрнут относительно справочника. Снимите галочку — вернётся как в справочнике';
+    rotCb.addEventListener('change', () => applyAction(() => PZE.resetRotation(doc, id)));
+    rotField.appendChild(rotCb);
+    if (rotated && PZE.hasOtherOrientation(doc, id)) {
+      const allBtn = el('button', 'chipBtn chipBtnText', 'все');
+      allBtn.type = 'button';
+      allBtn.title = 'Применить эту ориентацию ко всем строкам этого артикула';
+      allBtn.addEventListener('click', () => applyAction(() => PZE.applyOrientationToArticle(doc, id)));
+      rotField.appendChild(allBtn);
+    }
+    chip.appendChild(rotField);
+
     const actions = el('span', 'chipActionsField');
 
     const swapBtn = iconBtn('chipBtn', 'swap', 'Поменять местами длину и высоту (если короб не помещается в этой ориентации)');
-    swapBtn.addEventListener('click', () => { pushUndo(); PZE.swapLengthHeight(doc, id); onDocChanged(); });
+    swapBtn.addEventListener('click', () => applyAction(() => PZE.swapAxes(doc, id, 0, 2)));
     actions.appendChild(swapBtn);
 
     // Ножницы всегда на месте (чтобы кнопки в строке не «прыгали»), но при одной штуке
@@ -2652,19 +3151,29 @@ PZE.deserializeDoc = function (json) {
       const ans = prompt(`Сколько из ${row.qty} шт отделить в новую строку?`, Math.floor(row.qty / 2));
       if (ans === null) return;
       const n = parseInt(ans, 10);
-      if (n && n > 0 && n < row.qty) { pushUndo(); PZE.splitRow(doc, id, n); onDocChanged(); }
+      if (n && n > 0 && n < row.qty) applyAction(() => PZE.splitRow(doc, id, n));
       else if (ans.trim() !== '') alert('Число должно быть больше 0 и меньше текущего количества.');
     });
     actions.appendChild(splitBtn);
+
+    // Склейка: в той же шеренге есть другая строка этого артикула с такими же габаритами.
+    const loc0 = PZE.locate(doc, id);
+    if (loc0 && loc0.where === 'lane') {
+      const glueBtn = iconBtn('chipBtn', 'glue', 'Склеить с такой же строкой этой шеренги (то же артикул и габариты)');
+      const hasTwin = PZE.glueCandidates(doc, id).length > 0;
+      glueBtn.disabled = !hasTwin;
+      if (!hasTwin) glueBtn.title = 'Склеивать не с чем: в шеренге нет другой строки этого артикула с такими же габаритами';
+      glueBtn.addEventListener('click', () => applyAction(() => PZE.glueRows(doc, id)));
+      actions.appendChild(glueBtn);
+    }
 
     // Из заказа ничего не удаляется насовсем — «убрать» строку из шеренги означает
     // только вернуть её в «Не распределено», откуда её всегда можно назначить заново
     // (в том числе через Ctrl+Z). Строкам, которые и так уже в пуле, убирать некуда —
     // для них кнопки просто нет.
-    const loc0 = PZE.locate(doc, id);
     if (loc0 && loc0.where === 'lane') {
       const toPoolBtn = iconBtn('chipBtn', 'toPool', 'Вернуть в «Не распределено»');
-      toPoolBtn.addEventListener('click', () => { pushUndo(); PZE.moveTo(doc, id, { where: 'pool' }); onDocChanged(); });
+      toPoolBtn.addEventListener('click', () => applyAction(() => PZE.moveTo(doc, id, { where: 'pool' })));
       actions.appendChild(toPoolBtn);
     }
 
@@ -2674,9 +3183,9 @@ PZE.deserializeDoc = function (json) {
     // перетаскиваемую строку до/после неё (какая половина строки под курсором).
     // В авто-режиме порядок не редактируется — обычное поведение (перенос в шеренгу целиком).
     chip.addEventListener('dragover', (e) => {
-      if (doc.autoSort) return;
       const loc2 = PZE.locate(doc, id);
       if (!loc2 || loc2.where !== 'lane') return;
+      if (doc.pallets[loc2.pi].autoSort) return;
       e.preventDefault();
       e.stopPropagation();
       const rect = chip.getBoundingClientRect();
@@ -2686,29 +3195,28 @@ PZE.deserializeDoc = function (json) {
     });
     chip.addEventListener('dragleave', () => { chip.classList.remove('insertAfter', 'insertBefore'); });
     chip.addEventListener('drop', (e) => {
-      if (doc.autoSort) return;
       const loc2 = PZE.locate(doc, id);
       if (!loc2 || loc2.where !== 'lane') return;
+      if (doc.pallets[loc2.pi].autoSort) return;
       e.preventDefault();
       e.stopPropagation();
       chip.classList.remove('insertAfter', 'insertBefore');
       const draggedId = e.dataTransfer.getData('text/plain');
-      if (!draggedId || draggedId === id || !doc.rows[draggedId]) return;
+      // Событие уже остановлено — шеренга не получит drop и не снимет подсветку сама.
+      if (!draggedId || draggedId === id || !doc.rows[draggedId]) { renderEditor(); return; }
       const rect = chip.getBoundingClientRect();
       const after = (e.clientX - rect.left) > rect.width / 2;
-      pushUndo();
-      PZE.moveToPosition(doc, draggedId, { pi: loc2.pi, li: loc2.li }, id, after);
-      onDocChanged();
+      applyAction(() => PZE.moveToPosition(doc, draggedId, { pi: loc2.pi, li: loc2.li }, id, after));
     });
 
     return chip;
   }
   function round1(v) { return Math.round(v * 10) / 10; }
 
-  // Порядок внутри шеренги считается автоматически (arc-order) и от порядка
-  // перетаскивания не зависит — поэтому подсветку/сброс держим на уровне всего лэйна
-  // (не на отдельных карточках), а migание при наведении на дочерние карточки убираем
-  // счётчиком глубины (dragenter/dragleave иначе бесконечно чередуются на границах детей).
+  // Подсветку и приём drop держим на уровне всего блока (шеренги/пула), а мигание при
+  // наведении на дочерние строки убираем счётчиком глубины (dragenter/dragleave иначе
+  // бесконечно чередуются на границах детей). dest.where === 'newPallet' — зона под
+  // последней паллетой: drop создаёт новую паллету и кладёт строку в её шеренгу 1.
   function wireDropZone(container, dest) {
     let depth = 0;
     container.addEventListener('dragenter', (e) => {
@@ -2726,17 +3234,77 @@ PZE.deserializeDoc = function (json) {
       depth = 0;
       container.classList.remove('dragOver');
       const id = e.dataTransfer.getData('text/plain');
-      if (id && editorDoc.rows[id]) { pushUndo(); PZE.moveTo(editorDoc, id, dest); onDocChanged(); }
+      if (!id || !editorDoc || !editorDoc.rows[id]) return;
+      // Сброс туда же, где строка уже лежит (пул или авто-шеренга), ничего не меняет —
+      // не делаем пустой шаг undo. В ручной шеренге сброс на фон = перенос в конец, это действие.
+      const cur = PZE.locate(editorDoc, id);
+      if (cur && dest.where === 'pool' && cur.where === 'pool') return;
+      if (cur && dest.where === 'lane' && cur.where === 'lane' && cur.pi === dest.pi && cur.li === dest.li &&
+        editorDoc.pallets[dest.pi].autoSort) return;
+      applyAction(() => {
+        if (dest.where === 'newPallet') {
+          PZE.addPallet(editorDoc);
+          PZE.moveTo(editorDoc, id, { where: 'lane', pi: editorDoc.pallets.length - 1, li: 0 });
+        } else {
+          PZE.moveTo(editorDoc, id, dest);
+        }
+      });
     });
+  }
+  // Блок «Не распределено» статичен — приём drop навешивается один раз.
+  wireDropZone($('#editorPoolBox'), { where: 'pool' });
+
+  // Любое мутирующее действие редактора: снимок для undo → правка → авто-удаление
+  // опустевших паллет → проверка свеса/перевысоты (при ухудшении — подтверждение, «Нет»
+  // откатывает действие и убирает его из стека undo). Одно действие = один шаг undo.
+  function applyAction(mutator) {
+    if (!editorDoc) return false;
+    readConfigFromUI();
+    pushUndo();
+    const before = PZE.problemSnapshot(editorDoc, state.config);
+    const snapshot = undoStack[undoStack.length - 1];
+    mutator();
+    PZE.normalize(editorDoc);
+    if (PZE.serializeDoc(editorDoc) === snapshot) {
+      undoStack.pop();
+      updateUndoButton();
+      renderEditor();
+      return true;
+    }
+    const msgs = PZE.newProblems(editorDoc, state.config, before);
+    if (msgs.length && !confirm(msgs.join('\n') + '\n\nОставить?')) {
+      const prev = undoStack.pop();
+      try { editorDoc = PZE.deserializeDoc(prev); } catch (e) { /* остаёмся на текущем */ }
+      previewCache = {};
+      updateUndoButton();
+      renderEditor();
+      return false;
+    }
+    onDocChanged();
+    return true;
+  }
+
+  // Артикулы из заказа, которых не было в справочнике и которых ещё нет в раскладке.
+  function currentMissing() {
+    if (!editorDoc) return [];
+    const have = new Set(Object.values(editorDoc.rows).map((r) => PZ.normArticle(r.article)));
+    return state.missing.filter((m) => !have.has(PZ.normArticle(m.article)));
+  }
+  function renderMissingBox() {
+    const box = $('#missingArticlesBox');
+    const miss = currentMissing();
+    if (miss.length) {
+      box.hidden = false;
+      box.textContent = `Не найдены в справочнике (${miss.length}): ${miss.map((m) => m.article).join(', ')} — эти строки заказа пропущены. Добавьте их в таблицу-справочник и нажмите «Справочник».`;
+    } else {
+      box.hidden = true;
+    }
   }
 
   function renderEditor() {
     if (!editorDoc) return;
     readConfigFromUI();
     const doc = editorDoc;
-    if (doc.autoSort === undefined) doc.autoSort = true;
-    $('#autoSortToggle').checked = doc.autoSort;
-    $('#autoSortLabel').textContent = 'Порядок: ' + (doc.autoSort ? 'авто' : 'вручную');
 
     const poolBox = $('#editorPoolBox');
     if (!poolBox.querySelector('.chipHeaderRow')) {
@@ -2747,11 +3315,12 @@ PZE.deserializeDoc = function (json) {
     // Пул сортируется по высоте столбика (по убыванию) — это главный ориентир при
     // ручной раскладке, самые высокие/приоритетные артикулы должны быть видны первыми.
     const poolSorted = doc.pool.slice().sort((a, b) => doc.rows[b].stackHeightCm - doc.rows[a].stackHeightCm);
-    poolSorted.forEach((id) => poolChips.appendChild(chipEl(doc, id)));
-    // Подсветку и приём drop вешаем на весь блок «Не распределено» (не на тесно
-    // обёрнутый вокруг чипов ряд) — иначе рамка при наведении подгоняется под
-    // содержимое, а не под размер самого окна, что выглядит как баг.
-    wireDropZone($('#editorPoolBox'), { where: 'pool' });
+    poolSorted.forEach((id) => poolChips.appendChild(chipEl(doc, id, null)));
+
+    // Порог авто-деления — в placeholder поля настройки.
+    const autoThr = PZE.autoSplitThreshold(doc.pool.map((id) => doc.rows[id].stackHeightCm));
+    inSplitThreshold.placeholder = autoThr == null ? 'авто: не делить' : `авто: выше ${Math.round(autoThr)}`;
+    renderMissingBox();
 
     const palletsContainer = $('#editorPallets');
     palletsContainer.innerHTML = '';
@@ -2763,34 +3332,72 @@ PZE.deserializeDoc = function (json) {
       return;
     }
 
+    const r1 = (v) => Math.round(v * 10) / 10;
     doc.pallets.forEach((p, pi) => {
+      if (p.autoSort === undefined) p.autoSort = true;
+      const check = PZE.checkPallet(doc, pi, state.config);
+      const colorMap = PZ.assignColors(p.lanes.flat().map((id) => doc.rows[id]).filter(Boolean).map((r) => r.article));
       const box = el('div', 'editorPallet');
       const head = el('div', 'editorPalletHead');
       head.appendChild(el('b', null, `Паллета ${pi + 1}`));
+      const stats = el('span', 'editorPalletStats');
+      stats.appendChild(document.createTextNode(`коробов: ${check.boxes} · вес: ${r1(check.weightKg)} кг · высота с поддоном: `));
+      stats.appendChild(el('span', check.tooHigh ? 'bad' : null, `${r1(check.maxHeightCm)} / ${r1(check.limitCm)} см`));
+      head.appendChild(stats);
+
+      const headActions = el('div', 'editorPalletHeadActions');
+      const autoSortToggle = el('label', 'orderModeToggle');
+      autoSortToggle.title = 'Автосортировка расставляет короба в шеренге по высоте (короче к краю, выше к центру). В ручном режиме порядок внутри шеренги этой паллеты задаётся перетаскиванием. Настраивается отдельно для каждой паллеты.';
+      const autoSortCheckbox = document.createElement('input');
+      autoSortCheckbox.type = 'checkbox';
+      autoSortCheckbox.checked = p.autoSort;
+      const autoSortSpan = el('span', null, 'Порядок: ' + (p.autoSort ? 'авто' : 'вручную'));
+      autoSortToggle.appendChild(autoSortCheckbox);
+      autoSortToggle.appendChild(autoSortSpan);
+      autoSortCheckbox.addEventListener('change', () => {
+        applyAction(() => {
+          if (!autoSortCheckbox.checked) {
+            // Переходим в ручной режим — фиксируем в массивах шеренг этой паллеты текущий
+            // авто-порядок (arc-order), чтобы при выключении автосортировки ничего не «прыгнуло».
+            p.lanes = p.lanes.map((laneIds) => {
+              const articles = laneIds.map((id) => doc.rows[id]).filter(Boolean);
+              return PZ.arcOrderPreview(articles).map((a) => a.id);
+            });
+          }
+          p.autoSort = autoSortCheckbox.checked;
+        });
+      });
+      headActions.appendChild(autoSortToggle);
+
       const removeBtn = el('button', 'smallBtn', 'Удалить паллету'); removeBtn.type = 'button';
       removeBtn.addEventListener('click', () => {
-        if (confirm('Удалить паллету? Короба вернутся в пул «не распределено».')) { pushUndo(); PZE.removePallet(doc, pi); previewCache = {}; onDocChanged(); }
+        if (confirm('Удалить паллету? Короба вернутся в пул «не распределено».')) {
+          applyAction(() => { PZE.removePallet(doc, doc.pallets.indexOf(p)); });
+        }
       });
-      head.appendChild(removeBtn);
+      headActions.appendChild(removeBtn);
+      head.appendChild(headActions);
       box.appendChild(head);
 
       const lanes = el('div', 'editorLanes');
       p.lanes.forEach((laneIds, li) => {
         const lane = el('div', 'editorLane');
         lane.appendChild(el('div', 'laneLabel', `Шеренга ${li + 1}`));
-        lane.appendChild(el('div', 'laneHint', doc.autoSort
+        const over = check.overhangLanes.includes(li);
+        const len = check.laneLengths[li] || 0;
+        lane.appendChild(el('div', over ? 'laneInfo bad' : 'laneInfo',
+          `длина: ${r1(len)} / ${r1(check.palletLengthCm)} см` + (over ? ` — свес ${r1(len - check.palletLengthCm)} см` : '')));
+        lane.appendChild(el('div', 'laneHint', p.autoSort
           ? 'Порядок внутри считается автоматически: от края (короче) к центру (выше).'
           : 'Ручной режим: перетащите карточку на другую, чтобы вставить до/после неё.'));
         lane.appendChild(buildChipHeaderRow());
         const row = el('div', 'chipRow');
         // В авто-режиме показываем карточки сразу в том порядке, в котором они лягут в
         // итоговой раскладке (arc-order). В ручном — как расставил пользователь.
-        const displayOrder = doc.autoSort
+        const displayOrder = p.autoSort
           ? PZ.arcOrderPreview(laneIds.map((id) => doc.rows[id]).filter(Boolean)).map((a) => a.id)
           : laneIds;
-        displayOrder.forEach((id) => row.appendChild(chipEl(doc, id)));
-        // Так же, как и с пулом — подсветку вешаем на всю шеренгу целиком, а не на
-        // тесную обёртку вокруг карточек.
+        displayOrder.forEach((id) => row.appendChild(chipEl(doc, id, colorMap)));
         wireDropZone(lane, { where: 'lane', pi, li });
         lane.appendChild(row);
         lanes.appendChild(lane);
@@ -2816,7 +3423,7 @@ PZE.deserializeDoc = function (json) {
         setTimeout(() => {
           try {
             const pallet = palletsForRender[pi];
-            const scene = PZ.buildScene(pallet, state.config, `Паллета ${pi + 1}`, { manualOrder: !doc.autoSort });
+            const scene = PZ.buildScene(pallet, state.config, `Паллета ${pi + 1}`, { manualOrder: !p.autoSort });
             const canvas = PZR.composePallet(pallet, scene, state.shipment);
             const dataUrl = canvas.toDataURL('image/png');
             previewCache[pi] = { sig, dataUrl };
@@ -2831,6 +3438,11 @@ PZE.deserializeDoc = function (json) {
       palletsContainer.appendChild(box);
     });
 
+    // Зона «новая паллета» под последней паллетой.
+    const newZone = el('div', 'newPalletDrop', 'Перетащите сюда — новая паллета');
+    wireDropZone(newZone, { where: 'newPallet' });
+    palletsContainer.appendChild(newZone);
+
     const totalRows = Object.keys(doc.rows).length;
     $('#editorSummary').textContent =
       `Артикулов в работе: ${totalRows} · распределено: ${totalRows - doc.pool.length} · в пуле: ${doc.pool.length} · паллет: ${doc.pallets.length}`;
@@ -2841,55 +3453,119 @@ PZE.deserializeDoc = function (json) {
     editorSection.hidden = false;
   }
 
-  async function startEditor(orderLines) {
-    const lookup = await ensureLookup(false);
-    const { rows, missing } = PZ.mergeOrderWithLookup(orderLines, lookup);
-    if (rows.length === 0) throw new Error('Ни один артикул из заказа не найден в справочнике — нечего раскладывать.');
+  // Применяет уже собранные строки заказа (после успешного разбора и справочника).
+  function startEditor(rows, missing) {
     editorDoc = PZE.createDoc(rows);
+    state.missing = missing;
     state.initialDocPayload = PZE.serializeDoc(editorDoc);
     previewCache = {};
     resetUndo();
     showEditor();
-    const missingBox = $('#missingArticlesBox');
-    if (missing.length) {
-      missingBox.hidden = false;
-      missingBox.textContent = `Не найдены в справочнике (${missing.length}): ${missing.join(', ')} — эти строки заказа пропущены. Добавьте их в таблицу-справочник или в заказ вручную.`;
-    } else {
-      missingBox.hidden = true;
-    }
     onDocChanged();
   }
 
-  $('#addPalletBtn').addEventListener('click', () => { pushUndo(); PZE.addPallet(editorDoc); previewCache = {}; onDocChanged(); });
+  $('#addPalletBtn').addEventListener('click', () => { applyAction(() => PZE.addPallet(editorDoc)); });
 
-  const autoSortToggle = $('#autoSortToggle');
-  const autoSortLabel = $('#autoSortLabel');
-  autoSortToggle.addEventListener('change', () => {
-    if (!editorDoc) return;
-    pushUndo();
-    if (!autoSortToggle.checked) {
-      // Переходим в ручной режим — фиксируем в массивах шеренг текущий авто-порядок
-      // (arc-order), чтобы при выключении автосортировки ничего не «прыгнуло».
-      editorDoc.pallets.forEach((p) => {
-        p.lanes = p.lanes.map((laneIds) => {
-          const articles = laneIds.map((id) => editorDoc.rows[id]).filter(Boolean);
-          return PZ.arcOrderPreview(articles).map((a) => a.id);
-        });
-      });
+  // Сравнивает базовые габариты/вес строк со справочником; apply=true — обновляет их
+  // (поворот каждой строки сохраняется: текущие габариты пересчитываются из новых базовых).
+  function syncDocWithLookup(doc, lookup, apply) {
+    let n = 0;
+    for (const r of Object.values(doc.rows)) {
+      const d = lookup.get(PZ.normArticle(r.article));
+      if (!d) continue;
+      const diff = Math.abs(r.baseL - d.lengthCm) > 1e-9 || Math.abs(r.baseW - d.widthCm) > 1e-9 ||
+        Math.abs(r.baseH - d.heightCm) > 1e-9 || Math.abs((r.weightPerBoxKg || 0) - d.weightPerBoxKg) > 1e-9;
+      if (!diff) continue;
+      n++;
+      if (apply) {
+        r.baseL = d.lengthCm; r.baseW = d.widthCm; r.baseH = d.heightCm; r.weightPerBoxKg = d.weightPerBoxKg;
+        PZE.recomputeCurrent(r);
+      }
     }
-    editorDoc.autoSort = autoSortToggle.checked;
-    autoSortLabel.textContent = 'Порядок: ' + (autoSortToggle.checked ? 'авто' : 'вручную');
-    onDocChanged();
-  });
+    return n;
+  }
 
   $('#refreshLookupBtn').addEventListener('click', async () => {
+    if (!editorDoc) return;
     try {
-      await ensureLookup(true);
-      showError('');
-      renderEditor();
+      const lookup = await ensureLookup();
+      showError(state.lookupWarning || '');
+      const found = currentMissing().filter((m) => lookup.has(PZ.normArticle(m.article)));
+      const { rows: newRows } = PZ.mergeOrderWithLookup(found, lookup);
+      const diffRows = syncDocWithLookup(editorDoc, lookup, false);
+      let updateDims = false;
+      if (diffRows > 0) {
+        updateDims = confirm(`У ${diffRows} строк габариты отличаются от справочника. Обновить из справочника?`);
+      }
+      if (newRows.length === 0 && !updateDims) {
+        showInfo(diffRows > 0 ? 'Справочник обновлён, габариты оставлены как есть.' : 'Справочник обновлён, изменений нет.');
+        return;
+      }
+      if (!applyAction(() => {
+        for (const r of newRows) { editorDoc.rows[r.id] = r; editorDoc.pool.push(r.id); }
+        if (updateDims) syncDocWithLookup(editorDoc, lookup, true);
+      })) { showInfo('Обновление отменено.'); return; }
+      // «Сбросить» должен учитывать добавленные строки и новые габариты.
+      if (state.initialDocPayload) {
+        try {
+          const init = PZE.deserializeDoc(state.initialDocPayload);
+          for (const r of newRows) {
+            init.rows[r.id] = PZ.makeArticle({
+              id: r.id, article: r.article, qty: r.qty, lengthCm: r.lengthCm, widthCm: r.widthCm, heightCm: r.heightCm,
+              weightPerBoxKg: r.weightPerBoxKg, baseL: r.baseL, baseW: r.baseW, baseH: r.baseH, perm: r.perm,
+            });
+            init.pool.push(r.id);
+          }
+          if (updateDims) syncDocWithLookup(init, lookup, true);
+          state.initialDocPayload = PZE.serializeDoc(init);
+        } catch (e) { /* не критично */ }
+      }
+      const parts = [];
+      if (newRows.length) parts.push(`добавлено строк в «Не распределено»: ${newRows.length} (${newRows.map((r) => r.article).join(', ')})`);
+      if (updateDims) parts.push(`габариты/вес обновлены у ${diffRows} строк`);
+      showInfo('Справочник обновлён: ' + parts.join('; ') + '.');
     } catch (e) {
       showError('Не удалось обновить справочник: ' + e.message);
     }
+  });
+
+  $('#autoLayoutBtn').addEventListener('click', () => {
+    if (!editorDoc) return;
+    if (editorDoc.pool.length === 0) { showInfo('В «Не распределено» ничего нет — раскладывать нечего. Чтобы разложить заново, нажмите «Сбросить».'); return; }
+    readConfigFromUI();
+    let res = null;
+    if (!applyAction(() => { res = PZE.autoLayout(editorDoc, state.config, state.config.splitThresholdCm); })) return;
+    const parts = [`разложено строк: ${res.placed}`];
+    if (res.splitCount) parts.push(`разделено высоких столбиков: ${res.splitCount}`);
+    if (res.newPallets) parts.push(`добавлено паллет: ${res.newPallets}`);
+    if (res.unplaced.length) {
+      parts.push('не поместились даже на пустую паллету и остались в пуле: ' +
+        res.unplaced.map((id) => editorDoc.rows[id] && editorDoc.rows[id].article).filter(Boolean).join(', '));
+    }
+    showInfo('Автораскладка: ' + parts.join('; ') + '. Дальше доведите вручную.');
+  });
+
+  // Выгрузка черновика (исходный + текущий документ) — для разбора ручных раскладок.
+  $('#exportDraftBtn').addEventListener('click', () => {
+    if (!editorDoc) return;
+    readConfigFromUI();
+    const payload = {
+      fileName: state.fileName, orderNumber: inOrderNumber.value.trim(), shipmentDate: inShipDate.value,
+      settings: {
+        palletLengthMm: state.config.pallet.lengthMm, palletWidthMm: state.config.pallet.widthMm,
+        maxHeightCm: state.config.maxHeightCm, splitThresholdCm: state.config.splitThresholdCm,
+        lookupUrl: inLookupUrl.value.trim(),
+      },
+      missing: state.missing,
+      initial: state.initialDocPayload ? JSON.parse(state.initialDocPayload) : null,
+      current: JSON.parse(PZE.serializeDoc(editorDoc)),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = exportFileName('json').replace(/^Раскладка/, 'Черновик');
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
   });
 
   $('#clearDraftBtn').addEventListener('click', () => {
@@ -2902,6 +3578,7 @@ PZE.deserializeDoc = function (json) {
     pushUndo();
     try {
       editorDoc = PZE.deserializeDoc(state.initialDocPayload);
+      PZE.normalize(editorDoc);
     } catch (e) {
       showError('Не удалось сбросить: ' + e.message);
       return;
@@ -2914,22 +3591,16 @@ PZE.deserializeDoc = function (json) {
   $('#finishEditingBtn').addEventListener('click', () => {
     if (!editorDoc) return;
     readConfigFromUI();
+    if (editorDoc.pool.length > 0) {
+      const boxes = editorDoc.pool.reduce((s, id) => s + (editorDoc.rows[id] ? editorDoc.rows[id].qty : 0), 0);
+      if (!confirm(`В «Не распределено» осталось ${editorDoc.pool.length} строк (${boxes} коробов). Построить карточки без них?`)) return;
+    }
     buildCardsFromEditor();
   });
 
   $('#backToEditorBtn').addEventListener('click', () => { showEditor(); renderEditor(); });
 
   // ---------- Загрузка файла: автоопределение — готовая раскладка или голый заказ ----------
-  // «Заказ 57583018.xlsx» / «раскладка - Заказ 57583018.xlsx» и т.п. — вытаскиваем номер
-  // заказа прямо из имени файла, чтобы не вписывать его в настройки руками каждый раз.
-  // Не трогаем поле, если в нём уже что-то есть (например, восстановлено из истории) —
-  // только когда оно пустое.
-  function fillOrderNumberFromFileName(name) {
-    if (inOrderNumber.value.trim()) return;
-    const m = /заказ\D*(\d+)/i.exec(name || '');
-    if (m) { inOrderNumber.value = m[1]; state.shipment.orderNumber = m[1]; }
-  }
-
   // Дата отгрузки почти всегда — ближайшая пятница (сегодня считается ближайшей, если
   // сегодня и есть пятница). Просто дефолт: если пользователю нужна другая дата — он
   // правит её руками в настройках, поле остаётся обычным.
@@ -2948,29 +3619,43 @@ PZE.deserializeDoc = function (json) {
   }
   fillDefaultShipDate();
 
+  // Сначала разбор → справочник → сшивка, и только при полном успехе меняется состояние
+  // (имя файла, id истории, документ, поля отгрузки). При ошибке открытый документ
+  // остаётся как был.
   async function handleFile(file) {
     showError('');
-    state.fileName = file.name;
-    fillOrderNumberFromFileName(file.name);
-    fillDefaultShipDate();
+    showInfo('');
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array', cellDates: false });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+      const fmtRows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
 
       if (PZ.looksLikeLayout(rows) && !PZ.looksLikeOrder(rows)) {
         throw new Error('Это похоже на уже готовую раскладку (с колонками габаритов) — такие файлы больше не загружаются напрямую. Загрузите исходный заказ (артикул + количество), раскладка собирается внутри редактора.');
       }
-      const lines = PZ.parseOrder(rows);
+      const lines = PZ.parseOrder(rows, fmtRows);
+      const lookup = await ensureLookup();
+      const merged = PZ.mergeOrderWithLookup(lines, lookup);
+      if (merged.rows.length === 0) throw new Error('Ни один артикул из заказа не найден в справочнике — нечего раскладывать.');
+
+      // Успех — фиксируем новое состояние. Номер заказа — из имени файла («Заказ 57583018.xlsx»;
+      // не нашёлся — поле очищается), дата — ближайшая пятница.
+      state.fileName = file.name;
+      const m = /заказ\D*(\d+)/i.exec(file.name || '');
+      inOrderNumber.value = m ? m[1] : '';
+      inShipDate.value = nearestFridayIso();
+      readConfigFromUI();
       const id = genHistoryId();
       state.activeHistoryId = id;
       setActiveHistoryId(id);
-      await startEditor(lines);
+      startEditor(merged.rows, merged.missing);
+      showError(state.lookupWarning || '');
     } catch (e) {
-      state.pallets = []; state.scenes = []; state.cards = [];
-      hideAllPanels(); emptyState.hidden = false;
       showError('Не удалось обработать файл: ' + e.message);
+    } finally {
+      fileInput.value = ''; // чтобы тот же файл можно было выбрать повторно
     }
   }
 
@@ -2987,12 +3672,14 @@ PZE.deserializeDoc = function (json) {
     if (file) handleFile(file);
   });
 
-  [inLength, inWidth, inBlocksPerPallet, inOrderNumber, inShipDate].forEach((input) => {
+  [inLength, inWidth, inMaxHeight, inSplitThreshold, inLookupUrl, inOrderNumber, inShipDate].forEach((input) => {
     input.addEventListener('change', () => {
+      saveSettings();
       if (!editorDoc) return;
       if (!editorSection.hidden) { onDocChanged(); return; }
       readConfigFromUI();
       buildCardsFromEditor();
+      saveDraft();
     });
   });
 
@@ -3024,9 +3711,6 @@ PZE.deserializeDoc = function (json) {
   // ---- История файлов ----
   function openHistoryEntry(entry) {
     showError('');
-    state.fileName = entry.fileName;
-    state.activeHistoryId = entry.id;
-    setActiveHistoryId(entry.id);
     if (entry.type !== 'order') {
       // Старые записи истории с уже готовой раскладкой (загружались так до того, как
       // эту возможность убрали из приложения) — открыть по-старому уже нельзя, но пусть
@@ -3034,13 +3718,23 @@ PZE.deserializeDoc = function (json) {
       showError('Этот файл был сохранён как уже готовая раскладка — такой формат больше не поддерживается для повторного открытия. Загрузите исходный заказ заново.');
       return;
     }
+    let doc;
     try {
-      editorDoc = PZE.deserializeDoc(entry.payload);
+      doc = PZE.deserializeDoc(entry.payload);
     } catch (e) {
       showError('Не удалось открыть этот черновик: ' + e.message);
       return;
     }
+    editorDoc = doc;
+    PZE.normalize(editorDoc);
+    state.fileName = entry.fileName;
+    state.activeHistoryId = entry.id;
+    setActiveHistoryId(entry.id);
     state.initialDocPayload = entry.initialPayload || null;
+    state.missing = entry.missing || [];
+    inOrderNumber.value = entry.orderNumber || '';
+    inShipDate.value = entry.shipmentDate || nearestFridayIso();
+    readConfigFromUI();
     previewCache = {};
     resetUndo();
     showEditor();
@@ -3069,9 +3763,16 @@ PZE.deserializeDoc = function (json) {
       actions.appendChild(openBtn);
       const delBtn = el('button', 'smallBtn', '× Удалить'); delBtn.type = 'button';
       delBtn.addEventListener('click', () => {
-        if (!confirm(`Удалить «${entry.fileName}» из истории?`)) return;
+        const isActive = state.activeHistoryId === entry.id;
+        const note = isActive ? '\n\nЭто открытый сейчас файл — редактор закроется.' : '';
+        if (!confirm(`Удалить «${entry.fileName}» из истории?${note}`)) return;
         removeHistoryEntry(entry.id);
-        if (state.activeHistoryId === entry.id) { state.activeHistoryId = null; setActiveHistoryId(null); }
+        if (isActive) {
+          state.activeHistoryId = null; setActiveHistoryId(null);
+          editorDoc = null; state.pallets = []; state.scenes = []; state.cards = [];
+          resetUndo();
+          hideAllPanels(); emptyState.hidden = false;
+        }
         renderHistoryList();
       });
       actions.appendChild(delBtn);
@@ -3105,6 +3806,8 @@ PZE.deserializeDoc = function (json) {
     // а не на символ (key): при русской раскладке key даёт «я», и Ctrl+Z не срабатывал.
     const isUndoCombo = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ';
     if (!isUndoCombo) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') && !t.closest('#editorSection')) return;
     if (!editorSection.hidden) { e.preventDefault(); undoLastAction(); }
   });
 
