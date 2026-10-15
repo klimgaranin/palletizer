@@ -88,6 +88,7 @@
   .settingsPanel {
     margin-top: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
     padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px;
+    align-items: end; /* поля в одну линию, даже если подпись переносится на 2 строки */
   }
   .field { display: flex; flex-direction: column; gap: 4px; }
   .field label { font-size: 12px; color: var(--muted); font-weight: 700; display: flex; align-items: center; gap: 5px; }
@@ -165,8 +166,12 @@
      где места хватает, колонки остаются широкими и полностью читаемыми. */
   .editorLane .chipHeaderRow,
   .editorLane .chip {
-    grid-template-columns: 18px 62px 52px 50px 132px 104px 52px 108px;
+    grid-template-columns: 14px 62px 44px 30px 110px 70px 40px 102px; gap: 4px; padding-left: 5px; padding-right: 5px;
   }
+  /* В шеренге «шт»/«см» не пишем — единицы есть в заголовке колонки, а ширины в обрез. */
+  .editorLane .unit { display: none; }
+  .editorLane .chipPositionField input { width: 32px !important; }
+  .editorLane .chipBtn { width: 23px; height: 23px; }
   .chip.dragging { opacity: 0.4; }
   .chipArticle {
     font-size: 12px; font-weight: 700; line-height: 1; overflow: hidden; text-overflow: ellipsis;
@@ -353,7 +358,7 @@
     <div class="field"><label>Длина паллеты, мм</label><input type="number" id="cfgLength" value="1200" step="10" /></div>
     <div class="field"><label>Ширина паллеты, мм</label><input type="number" id="cfgWidth" value="800" step="10" /></div>
     <div class="field">
-      <label>Макс. высота паллеты с поддоном, см <span class="infoIcon" tabindex="0" title="Поддон 14.4 см + самый высокий столбик. Если паллета выше — в редакторе красным, а при ручном действии, которое её превышает, приложение просит подтверждение.">i</span></label>
+      <label>Макс. высота, см <span class="infoIcon" tabindex="0" title="Максимальная высота паллеты вместе с поддоном: поддон 14.4 см + самый высокий столбик. Если паллета выше — в редакторе красным, а при ручном действии, которое её превышает, приложение просит подтверждение.">i</span></label>
       <input type="number" id="cfgMaxHeight" value="200" min="20" step="1" />
     </div>
     <div class="field">
@@ -413,7 +418,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.10.2</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.10.3</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -2650,16 +2655,22 @@ PZE.deserializeDoc = function (json) {
   // Одна и та же строка заголовков колонок — и над пулом, и перед каждой шеренгой
   // (везде собирается этой функцией), чтобы не приходилось листать наверх, чтобы
   // вспомнить, что значит какая колонка, и чтобы подписи нигде не разошлись.
-  function buildChipHeaderRow() {
+  // compact — для шеренги (колонка вдвое уже пула): короткие подписи, полные — в title.
+  function buildChipHeaderRow(compact) {
     const row = el('div', 'chipHeaderRow');
+    const cell = (full, short, title) => {
+      const c = el('span', null, compact ? short : full);
+      if (title || compact) c.title = title || full;
+      row.appendChild(c);
+    };
     row.appendChild(el('span'));
-    row.appendChild(el('span', null, 'Артикул'));
-    const h = el('span', null, 'ВЫСОТА'); h.title = 'Высота столбика'; row.appendChild(h);
-    row.appendChild(el('span', null, 'Кол-во'));
-    row.appendChild(el('span', null, 'Д×Ш×В, см'));
-    const ps = el('span', null, 'ПАЛЛЕТА/ШЕРЕНГА'); ps.title = 'Номер паллеты / номер шеренги'; row.appendChild(ps);
-    const rot = el('span', null, 'Поворот'); rot.title = 'Короб повёрнут относительно справочника'; row.appendChild(rot);
-    row.appendChild(el('span', null, 'Действия'));
+    cell('Артикул', 'Артикул');
+    cell('Высота', 'Выс.', 'Высота столбика, см');
+    cell('Кол-во', 'Шт', 'Количество коробов');
+    cell('Д×Ш×В, см', 'Д×Ш×В, см');
+    cell('Паллета/Шеренга', 'П / Ш', 'Номер паллеты / номер шеренги');
+    cell('Поворот', 'Пов.', 'Короб повёрнут относительно справочника');
+    cell('Действия', 'Действия');
     return row;
   }
   const formatDateRu = (isoDate) => {
@@ -3015,7 +3026,7 @@ PZE.deserializeDoc = function (json) {
 
     const qtyField = el('span', 'chipField');
     const qtyInput = mkNum('chipQtyInput', row.qty, 1, 1);
-    qtyField.appendChild(qtyInput); qtyField.appendChild(document.createTextNode(' шт'));
+    qtyField.appendChild(qtyInput); qtyField.appendChild(el('span', 'unit', ' шт'));
     chip.appendChild(qtyField);
 
     // Д [↔] Ш [↔] В: стрелки меняют оси местами у ЭТОЙ строки (поворот столбика);
@@ -3028,7 +3039,7 @@ PZE.deserializeDoc = function (json) {
     const arrowWH = iconBtn('chipArrow', 'arrows', 'Поменять местами ширину и высоту этой строки');
     dimsField.appendChild(lInput); dimsField.appendChild(arrowLW);
     dimsField.appendChild(wInput); dimsField.appendChild(arrowWH);
-    dimsField.appendChild(hInput); dimsField.appendChild(document.createTextNode(' см'));
+    dimsField.appendChild(hInput); dimsField.appendChild(el('span', 'unit', ' см'));
     chip.appendChild(dimsField);
 
     qtyInput.addEventListener('change', () => {
@@ -3390,7 +3401,7 @@ PZE.deserializeDoc = function (json) {
         lane.appendChild(el('div', 'laneHint', p.autoSort
           ? 'Порядок внутри считается автоматически: от края (короче) к центру (выше).'
           : 'Ручной режим: перетащите карточку на другую, чтобы вставить до/после неё.'));
-        lane.appendChild(buildChipHeaderRow());
+        lane.appendChild(buildChipHeaderRow(true));
         const row = el('div', 'chipRow');
         // В авто-режиме показываем карточки сразу в том порядке, в котором они лягут в
         // итоговой раскладке (arc-order). В ручном — как расставил пользователь.
