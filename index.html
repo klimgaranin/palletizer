@@ -387,7 +387,7 @@
             <option value="lane">в другую шеренгу</option>
           </select>
         </label>
-        <button type="button" class="ghostBtn" id="autoLayoutBtn" title="Предварительно разложить всё, что в «Не распределено», по паллетам (черновая раскидка — дальше доводите руками)">Разложить авто</button>
+        <button type="button" class="ghostBtn" id="autoLayoutBtn" title="Разложить то, что в «Не распределено»: сначала в свободное место существующих паллет, потом на новые; уже разложенное не трогается (черновая раскидка — дальше доводите руками)">Разложить авто</button>
         <button type="button" class="ghostBtn" id="addPalletBtn" title="Добавить паллету">+ Паллета</button>
         <button type="button" class="ghostBtn" id="refreshLookupBtn" title="Обновить справочник габаритов">Справочник</button>
         <button type="button" class="ghostBtn" id="clearDraftBtn" title="Отменить все изменения и вернуться к состоянию сразу после загрузки файла">Сбросить</button>
@@ -418,7 +418,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.11.0</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.11.1</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -479,13 +479,13 @@
       <h3>Редактор раскладки</h3>
       <p>Любой загруженный заказ открывается в редакторе, где вручную (или полуавтоматически) распределяется по паллетам и шеренгам:</p>
       <ul>
-        <li>Каждый артикул — строка со своим значком <b>H:</b> (высота столбика — им и стоит ориентироваться при раскладке). Перетащите строку мышью за ручку «⠿», либо — быстрее — впишите номер в поле <b>«Паллета / Шеренга»</b> прямо на строке (0 в поле паллеты = вернуть в «не распределено»). Номер на один больше последней паллеты создаёт новую паллету.</li>
+        <li>Каждый артикул — строка со своим значком <b>H:</b> (высота столбика — им и стоит ориентироваться при раскладке). Перетащите строку мышью за ручку «⠿», либо — быстрее — впишите номер в поле <b>«Паллета / Шеренга»</b> прямо на строке (0 в поле паллеты = вернуть в «не распределено»). Номер на один больше последней паллеты создаёт новую паллету. Можно вписать номера сразу в нескольких строках — один Enter переносит все (одним шагом «Отменить»); если где-то номер неверный, не переносится ничего.</li>
         <li><b>✂</b> — разделить: отделить часть количества в отдельную строку (например, часть коробов на одну паллету, часть на другую). Неактивна (серая), если в строке всего 1 шт — делить нечего.</li>
         <li><b>⇄</b> в колонке «Действия» — поменять местами длину и высоту короба; стрелки <b>↔</b> между полями Д, Ш, В меняют местами длину↔ширину и ширину↔высоту. Поворот относится только к этой строке (столбику): один артикул можно разделить на несколько столбиков и повернуть только один из них. Повёрнутая строка помечена галочкой «Поворот» — снимите её, и габариты вернутся как в справочнике; кнопка «все» применяет ориентацию ко всем строкам артикула.</li>
         <li><b>Склеить</b> (две стрелки к центру) — слить в одну строку другую строку того же артикула с такими же габаритами из той же шеренги.</li>
-        <li><b>Разложить авто</b> — черновая раскладка всего, что в «Не распределено»: самые высокие столбики делятся пополам (порог — в настройках, пусто = авто), строки раскладываются по паллетам от высоких к низким без свеса и с учётом лимита высоты; не влезшее остаётся в пуле. Один шаг «Отменить». Пустая паллета, из которой ушла последняя строка, удаляется сама; под последней паллетой — зона «новая паллета» для перетаскивания.</li>
+        <li><b>Разложить авто</b> — черновая раскладка того, что в «Не распределено» (уже разложенные строки не трогаются, так что можно собрать 1–2 паллеты вручную, а остальное — кнопкой): самые высокие столбики делятся пополам (порог — в настройках, пусто = авто), столбик выше лимита высоты делится на равные части, которые проходят по высоте; строки раскладываются от высоких к низким сначала в свободное место существующих паллет, потом на новые — без свеса и с учётом лимита высоты. В пуле остаётся только то, что не встаёт даже на пустую паллету (короб шире половины или длиннее паллеты — поверните его). Один шаг «Отменить». Пустая паллета, из которой ушла последняя строка, удаляется сама; под последней паллетой — зона «новая паллета» для перетаскивания.</li>
         <li><b>Черновик JSON</b> — скачать исходный и текущий документ (раскладку целиком). Такой файл можно открыть обратно через поле загрузки (см. «Загрузка») — так раскладку можно передать на другой компьютер или вернуться к ней позже.</li>
-        <li>Стрелка-возврат — убрать строку из шеренги обратно в «Не распределено». Из заказа ничего не удаляется насовсем — только переносится между шеренгами и пулом.</li>
+        <li>Стрелка-возврат — убрать строку из шеренги обратно в «Не распределено»; если там уже есть строка того же артикула с теми же габаритами, они склеиваются в одну (разрезанное ✂ в самом пуле не склеивается). Из заказа ничего не удаляется насовсем — только переносится между шеренгами и пулом.</li>
         <li>Габариты и количество на строке можно просто вписать вручную поверх подтянутых из справочника. Ручной ввод габарита — это исправление данных: оно применяется ко всем строкам артикула (с учётом поворота каждой) и обновляет габариты «как в справочнике». Число должно быть больше 0. Число коробов и вес груза показаны в заголовке паллеты, в шапке карточки и в сводной странице PDF.</li>
         <li><b>Порядок в шеренге: авто/вручную</b> — переключатель у заголовка каждой паллеты, свой для каждой паллеты отдельно. По умолчанию короба внутри шеренги сами расставляются по высоте столбика (короче к краю, выше к центру). Переключив конкретную паллету в «вручную», можно перетащить строку на другую внутри шеренги (за ручку «⠿»), чтобы вставить её до/после — тогда порядок на этой паллете задаёте сами.</li>
         <li><b>Отменить (Ctrl+Z)</b> — откатывает последнее действие в редакторе (перенос, разбивку, правку поля и т.д.), можно нажимать много раз подряд.</li>
@@ -2140,8 +2140,8 @@ PZE.addPallet = function (doc) { doc.pallets.push(PZE.newPallet(true)); };
 PZE.removePallet = function (doc, idx) {
   const p = doc.pallets[idx];
   if (!p) return;
-  for (const lane of p.lanes) doc.pool.push(...lane);
   doc.pallets.splice(idx, 1);
+  for (const lane of p.lanes) for (const id of lane) if (!PZE.mergeIntoPool(doc, id)) doc.pool.push(id);
 };
 
 // Паллета, из которой ушла последняя строка, удаляется сама; пустая «свежая» (только что
@@ -2177,9 +2177,26 @@ PZE.removeFromCurrent = function (doc, id) {
 };
 
 PZE.moveTo = function (doc, id, dest) {
+  const from = PZE.locate(doc, id);
   PZE.removeFromCurrent(doc, id);
-  if (dest.where === 'pool') doc.pool.push(id);
-  else doc.pallets[dest.pi].lanes[dest.li].push(id);
+  if (dest.where === 'pool') {
+    // Вернулась из шеренги — склеиваем с такой же строкой в пуле (разрезанное в самом пуле
+    // не трогаем: там разрезают как раз затем, чтобы разнести части).
+    if (!(from && from.where === 'pool') && PZE.mergeIntoPool(doc, id)) return;
+    doc.pool.push(id);
+  } else doc.pallets[dest.pi].lanes[dest.li].push(id);
+};
+
+// Строка id (сейчас не в пуле) вливается в строку пула того же артикула с теми же
+// габаритами и поворотом: количество складывается, сама строка удаляется. true — влилась.
+PZE.mergeIntoPool = function (doc, id) {
+  const row = doc.rows[id];
+  if (!row) return false;
+  const tid = doc.pool.find((x) => x !== id && doc.rows[x] && sameArticle(doc.rows[x], row) && sameDims(doc.rows[x], row));
+  if (!tid) return false;
+  doc.rows[tid].qty += row.qty;
+  delete doc.rows[id];
+  return true;
 };
 
 // Ручной режим: переносит id в конкретную шеренгу на позицию рядом с beforeId (после —
@@ -2443,6 +2460,16 @@ PZE.autoLayout = function (doc, config, thresholdCm) {
         if (PZE.splitRow(doc, id, Math.floor(row.qty / 2))) res.splitCount++;
       }
     }
+  }
+  // Столбик выше лимита высоты (и после деления пополам, и оставшийся в пуле с прошлого раза)
+  // делится на равные части, каждая из которых проходит по высоте, — иначе он навсегда
+  // застревал бы в пуле.
+  for (const id of doc.pool.slice()) {
+    const row = doc.rows[id];
+    if (!row || row.stackHeightCm <= stackLimit + PZE_EPS || row.heightCm > stackLimit + PZE_EPS) continue;
+    const maxBoxes = Math.max(1, Math.floor((stackLimit + PZE_EPS) / row.heightCm));
+    const per = Math.ceil(row.qty / Math.ceil(row.qty / maxBoxes));
+    while (row.qty > per) { if (!PZE.splitRow(doc, id, per)) break; res.splitCount++; }
   }
 
   const items = doc.pool.map((id) => doc.rows[id]).filter(Boolean)
@@ -3152,43 +3179,15 @@ PZE.deserializeDoc = function (json) {
     posField.appendChild(document.createTextNode('/'));
     posField.appendChild(posLane);
     chip.appendChild(posField);
+    posPallet.dataset.orig = posPallet.value;
+    posLane.dataset.orig = posLane.value;
+    chip._pos = { id, posPallet, posLane };
 
-    function applyPositionFromInputs() {
-      const pRaw = posPallet.value.trim();
-      const lRaw = posLane.value.trim();
-      const p = pRaw === '' ? NaN : Math.round(parseFloat(pRaw));
-      if (!Number.isFinite(p) || p < 0) { showError('Впишите номер паллеты (0 — не распределено) и нажмите Enter.'); posPallet.focus(); return; }
-      if (p > doc.pallets.length + 1) {
-        showError(`Такой паллеты нет — можно указать до ${doc.pallets.length + 1}.`);
-        posPallet.focus();
-        return;
-      }
-      let l = 0;
-      if (p > 0) {
-        l = lRaw === '' ? NaN : Math.round(parseFloat(lRaw));
-        if (!Number.isFinite(l) || l < 1 || l > 2) { showError('Впишите номер шеренги (1 или 2) и нажмите Enter.'); posLane.focus(); return; }
-      }
-      showError('');
-      // Место не изменилось — ничего не делать (иначе moveTo переставит строку в конец шеренги).
-      const cur = PZE.locate(doc, id);
-      if (cur && (p === 0 ? cur.where === 'pool' : (cur.where === 'lane' && cur.pi === p - 1 && cur.li === l - 1))) {
-        renderEditor();
-        return;
-      }
-      applyAction(() => {
-        if (p === 0) {
-          PZE.moveTo(doc, id, { where: 'pool' });
-        } else {
-          if (p === doc.pallets.length + 1) PZE.addPallet(doc);
-          PZE.moveTo(doc, id, { where: 'lane', pi: p - 1, li: l - 1 });
-        }
-      });
-    }
     [posPallet, posLane].forEach((input) => {
       input.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        applyPositionFromInputs();
+        applyPositionsFromInputs(id);
       });
     });
 
@@ -3331,6 +3330,50 @@ PZE.deserializeDoc = function (json) {
   }
   // Блок «Не распределено» статичен — приём drop навешивается один раз.
   wireDropZone($('#editorPoolBox'), { where: 'pool' });
+
+  // Enter в поле «Паллета / Шеренга» любой строки применяет места ВСЕХ строк, где номера
+  // вписаны заново (не только той, где нажат Enter) — одним действием (один шаг «Отменить»).
+  // Если где-то номер неверный — не переносится ничего, фокус на ошибочное поле.
+  function applyPositionsFromInputs(srcId) {
+    const doc = editorDoc;
+    if (!doc) return;
+    const nP = doc.pallets.length;
+    const moves = [];
+    for (const chip of document.querySelectorAll('#editorSection .chip')) {
+      const pos = chip._pos;
+      if (!pos || !doc.rows[pos.id]) continue;
+      const { posPallet, posLane } = pos;
+      const edited = posPallet.value !== posPallet.dataset.orig || posLane.value !== posLane.dataset.orig;
+      if (!edited && pos.id !== srcId) continue;
+      const art = doc.rows[pos.id].article;
+      const fail = (msg, input) => { showError(`${art}: ${msg}`); input.focus(); return false; };
+      const pRaw = posPallet.value.trim();
+      const lRaw = posLane.value.trim();
+      const p = pRaw === '' ? NaN : Math.round(parseFloat(pRaw));
+      if (!Number.isFinite(p) || p < 0) return fail('впишите номер паллеты (0 — не распределено) и нажмите Enter.', posPallet);
+      if (p > nP + 1) return fail(`такой паллеты нет — можно указать до ${nP + 1}.`, posPallet);
+      let l = 0;
+      if (p > 0) {
+        l = lRaw === '' ? NaN : Math.round(parseFloat(lRaw));
+        if (!Number.isFinite(l) || l < 1 || l > 2) return fail('впишите номер шеренги (1 или 2) и нажмите Enter.', posLane);
+      }
+      // Место не изменилось — не трогаем (иначе moveTo переставит строку в конец шеренги).
+      const cur = PZE.locate(doc, pos.id);
+      if (cur && (p === 0 ? cur.where === 'pool' : (cur.where === 'lane' && cur.pi === p - 1 && cur.li === l - 1))) continue;
+      moves.push({ id: pos.id, p, l });
+    }
+    showError('');
+    if (moves.length === 0) { renderEditor(); return; }
+    applyAction(() => {
+      // Номер N+1 у нескольких строк — все в одну новую паллету.
+      if (moves.some((m) => m.p === nP + 1)) PZE.addPallet(doc);
+      for (const m of moves) {
+        if (!doc.rows[m.id]) continue;
+        if (m.p === 0) PZE.moveTo(doc, m.id, { where: 'pool' });
+        else PZE.moveTo(doc, m.id, { where: 'lane', pi: m.p - 1, li: m.l - 1 });
+      }
+    });
+  }
 
   // Любое мутирующее действие редактора: снимок для undo → правка → авто-удаление
   // опустевших паллет → проверка свеса/перевысоты (при ухудшении — подтверждение, «Нет»
