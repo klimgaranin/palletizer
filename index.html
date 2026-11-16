@@ -341,8 +341,8 @@
 
   <div class="dropzone" id="dropzone">
     <div class="dzTitle">Перетащите .xlsx сюда или нажмите, чтобы выбрать файл</div>
-    <div class="dzHint">Данные не покидают ваш компьютер — обработка происходит прямо в браузере</div>
-    <input type="file" id="fileInput" accept=".xlsx,.xls" hidden />
+    <div class="dzHint">Заказ или готовая раскладка (.xlsx, «Черновик JSON»). Данные не покидают ваш компьютер — обработка происходит прямо в браузере</div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.json" hidden />
   </div>
 
   <div class="errorBox" id="errorBox" hidden></div>
@@ -418,7 +418,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.10.3</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.11.0</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -450,7 +450,14 @@
     </div>
     <div class="modalBody">
       <h3>Загрузка</h3>
-      <p>Перетащите файл <code>.xlsx</code> с заказом (артикул + количество) в область загрузки или нажмите на неё и выберите файл. Всё считается прямо в браузере — файл никуда не отправляется. Готовые раскладки (с уже проставленными габаритами) приложение больше не принимает — раскладка всегда собирается заново из исходного заказа, в редакторе.</p>
+      <p>Перетащите файл <code>.xlsx</code> с заказом (артикул + количество) в область загрузки или нажмите на неё и выберите файл. Всё считается прямо в браузере — файл никуда не отправляется.</p>
+      <p>Туда же можно загрузить <b>готовую раскладку</b> — она откроется в редакторе, как будто её только что собрали:</p>
+      <ul>
+        <li><b>Excel из приложения</b> («Excel» / «Скачать Excel»): паллеты, шеренги и порядок столбиков — как в файле.</li>
+        <li><b>Ручная раскладка в Excel</b>: колонки «Артикул», «Кол-во коробов», «Длина», «Ширина», «Высота» (как стоит короб), по желанию «вес шт». Шеренги разделяются пустыми строками, каждые два соседних блока — одна паллета (первый блок — шеренга 1, второй — шеренга 2). Порядок внутри шеренги — авто.</li>
+        <li><b>Черновик JSON</b> (кнопка «Черновик JSON»): раскладка целиком, вместе с номером заказа, датой и настройками паллеты; «Сбросить» вернёт исходное состояние из черновика.</li>
+      </ul>
+      <p>Вес короба, если его нет в файле, и габариты «как в справочнике» (для кнопок поворота) берутся из справочника. Если артикула в справочнике нет, вес считается 0 — об этом появится сообщение.</p>
 
       <h3>Формат файла заказа</h3>
       <ul>
@@ -477,7 +484,7 @@
         <li><b>⇄</b> в колонке «Действия» — поменять местами длину и высоту короба; стрелки <b>↔</b> между полями Д, Ш, В меняют местами длину↔ширину и ширину↔высоту. Поворот относится только к этой строке (столбику): один артикул можно разделить на несколько столбиков и повернуть только один из них. Повёрнутая строка помечена галочкой «Поворот» — снимите её, и габариты вернутся как в справочнике; кнопка «все» применяет ориентацию ко всем строкам артикула.</li>
         <li><b>Склеить</b> (две стрелки к центру) — слить в одну строку другую строку того же артикула с такими же габаритами из той же шеренги.</li>
         <li><b>Разложить авто</b> — черновая раскладка всего, что в «Не распределено»: самые высокие столбики делятся пополам (порог — в настройках, пусто = авто), строки раскладываются по паллетам от высоких к низким без свеса и с учётом лимита высоты; не влезшее остаётся в пуле. Один шаг «Отменить». Пустая паллета, из которой ушла последняя строка, удаляется сама; под последней паллетой — зона «новая паллета» для перетаскивания.</li>
-        <li><b>Черновик JSON</b> — скачать исходный и текущий документ (для разбора ручных раскладок).</li>
+        <li><b>Черновик JSON</b> — скачать исходный и текущий документ (раскладку целиком). Такой файл можно открыть обратно через поле загрузки (см. «Загрузка») — так раскладку можно передать на другой компьютер или вернуться к ней позже.</li>
         <li>Стрелка-возврат — убрать строку из шеренги обратно в «Не распределено». Из заказа ничего не удаляется насовсем — только переносится между шеренгами и пулом.</li>
         <li>Габариты и количество на строке можно просто вписать вручную поверх подтянутых из справочника. Ручной ввод габарита — это исправление данных: оно применяется ко всем строкам артикула (с учётом поворота каждой) и обновляет габариты «как в справочнике». Число должно быть больше 0. Число коробов и вес груза показаны в заголовке паллеты, в шапке карточки и в сводной странице PDF.</li>
         <li><b>Порядок в шеренге: авто/вручную</b> — переключатель у заголовка каждой паллеты, свой для каждой паллеты отдельно. По умолчанию короба внутри шеренги сами расставляются по высоте столбика (короче к краю, выше к центру). Переключив конкретную паллету в «вручную», можно перетащить строку на другую внутри шеренги (за ручку «⠿»), чтобы вставить её до/после — тогда порядок на этой паллете задаёте сами.</li>
@@ -1045,6 +1052,66 @@ PZ.looksLikeOrder = function (sheetRows) {
   const norm = (v) => (v === undefined || v === null ? '' : String(v).trim().toLowerCase());
   const has = (pred) => header.some((h) => { const n = norm(h); return n && pred(n); });
   return has((h) => h.includes('артикул')) && (has((h) => h.includes('поставлю')) || has((h) => h.includes('заказано')));
+};
+
+// ---------- Готовая раскладка из Excel (выгрузка «Скачать Excel») ----------
+// Колонки по заголовку: Артикул, Кол-во (коробов), Длина/Ширина/Высота (как стоит короб),
+// Паллета, Шеренга; «Вес» — если есть (кг на короб). Пустые строки разделяют шеренги:
+// - есть «Паллета» (выгрузка приложения) — без «Шеренги» первая группа строк паллеты идёт в
+//   шеренгу 1, остальные — во 2;
+// - нет «Паллеты» (ручная раскладка: «Кол-во коробов», «Длина OUTER», …) — блоки между пустыми
+//   строками, каждые два соседних блока = одна паллета (шеренга 1 и 2).
+// Возвращает {lines: [{article, qty, lengthCm, widthCm, heightCm, weightPerBoxKg|null, pallet|null, lane}], byBlocks}.
+PZ.parseLayout = function (sheetRows, formattedRows) {
+  if (!sheetRows || sheetRows.length < 2) throw new Error('Лист пустой — нет строк раскладки.');
+  const header = sheetRows[0] || [];
+  const norm = (v) => (v === undefined || v === null ? '' : String(v).trim().toLowerCase());
+  const findCol = (pred) => { for (let c = 0; c < header.length; c++) { const h = norm(header[c]); if (h && pred(h)) return c; } return -1; };
+  const cArt = findCol((h) => h.includes('артикул'));
+  const cQty = findCol((h) => (h.includes('кол') || h.startsWith('шт') || h.includes('короб')) && !h.includes('outer') && !h.includes('в короб'));
+  const cL = findCol((h) => h.includes('длина'));
+  const cW = findCol((h) => h.includes('ширина'));
+  const cH = findCol((h) => h.includes('высота') && !h.includes('столб') && !h.includes('стопк') && !h.includes('паллет'));
+  const cPal = findCol((h) => h.includes('паллет') && !h.includes('высота'));
+  const cLane = findCol((h) => h.includes('шеренг'));
+  const cWeight = findCol((h) => h.includes('вес') && !h.includes('арт') && !h.includes('общ') && !h.includes('груз') && !h.includes('итог'));
+  const byBlocks = cPal < 0;
+  let block = -1;
+  if (cArt < 0 || cQty < 0 || cL < 0 || cW < 0 || cH < 0) {
+    throw new Error('в раскладке не найдены колонки «Артикул», «Кол-во», «Длина», «Ширина», «Высота».');
+  }
+  const out = [];
+  let lastPal = null, group = 0, prevBlank = true;
+  for (let i = 1; i < sheetRows.length; i++) {
+    const row = sheetRows[i] || [];
+    const fmt = (formattedRows && formattedRows[i]) || row;
+    const article = String(fmt[cArt] == null ? '' : fmt[cArt]).trim();
+    if (!article) { prevBlank = true; continue; }
+    const qty = PZ.parseNum(row[cQty]);
+    const L = PZ.parseNum(row[cL]), W = PZ.parseNum(row[cW]), Hh = PZ.parseNum(row[cH]);
+    if (![qty, L, W, Hh].every((v) => v > 0)) throw new Error(`строка ${i + 1} («${article}»): нужны количество и габариты больше 0.`);
+    if (Math.abs(qty - Math.round(qty)) > 1e-9) throw new Error(`строка ${i + 1} («${article}»): количество коробов должно быть целым.`);
+    let pallet, lane;
+    if (byBlocks) {
+      if (prevBlank) block++;
+      prevBlank = false;
+      pallet = Math.floor(block / 2) + 1;
+      lane = (block % 2) + 1;
+    } else {
+      const palN = PZ.parseNum(row[cPal]);
+      pallet = palN >= 1 ? Math.round(palN) : null;
+      if (pallet !== lastPal) { group = 0; lastPal = pallet; prevBlank = false; } else if (prevBlank && out.length) group++;
+      prevBlank = false;
+      const laneN = cLane >= 0 ? PZ.parseNum(row[cLane]) : NaN;
+      if (laneN >= 1) lane = laneN >= 2 ? 2 : 1;
+      else lane = group === 0 ? 1 : 2;
+    }
+    const wt = cWeight >= 0 ? PZ.parseNum(row[cWeight]) : NaN;
+    out.push({ article, qty: Math.round(qty), lengthCm: L, widthCm: W, heightCm: Hh,
+      weightPerBoxKg: wt >= 0 ? wt : null, pallet, lane });
+  }
+  if (out.length === 0) throw new Error('в раскладке нет ни одной строки с артикулом.');
+  return { lines: out, byBlocks };
 };
 
 // ---------- Заказ (перенос вручную: только Артикул + Кол-во, без габаритов —
@@ -2847,8 +2914,8 @@ PZE.deserializeDoc = function (json) {
   }
 
   // ---------- Выгрузка распределения в Excel ----------
-  // Это выгрузка для печати/архива: приложение такие файлы обратно не загружает (раскладка
-  // всегда собирается заново из исходного заказа). Строки идут в том же порядке, в котором короба реально легли на карточке (авто-дуга
+  // Выгрузка для печати/архива; её же можно открыть обратно (openLayoutXlsx — колонки ниже
+  // менять согласованно с PZ.parseLayout). Строки идут в том же порядке, в котором короба реально легли на карточке (авто-дуга
   // или ручной порядок — как сейчас выставлено), шеренги разделены пустой строкой.
   function scenesForExport() {
     if (editorDoc && !editorSection.hidden) {
@@ -3633,10 +3700,160 @@ PZE.deserializeDoc = function (json) {
   // Сначала разбор → справочник → сшивка, и только при полном успехе меняется состояние
   // (имя файла, id истории, документ, поля отгрузки). При ошибке открытый документ
   // остаётся как был.
+  // Черновик JSON (кнопка «Черновик JSON») → открыть раскладку как новый файл истории.
+  // Проверяем всё до изменения состояния: при ошибке открытый документ остаётся как был.
+  function parseDraftJson(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (e) { throw new Error('файл не похож на черновик — это не JSON.'); }
+    const cur = data && (data.current || (data.rows && data.pallets ? data : null));
+    if (!cur || typeof cur.rows !== 'object' || !Array.isArray(cur.pallets)) {
+      throw new Error('в файле нет раскладки. Нужен файл, скачанный кнопкой «Черновик JSON».');
+    }
+    const checkDoc = (raw, what) => {
+      const ids = new Set(Object.keys(raw.rows || {}));
+      if (ids.size === 0) throw new Error(`${what}: нет ни одной строки.`);
+      for (const id of ids) {
+        const r = raw.rows[id];
+        const nums = [r.qty, r.lengthCm, r.widthCm, r.heightCm];
+        if (!r.article || nums.some((v) => !(typeof v === 'number' && v > 0))) {
+          throw new Error(`${what}: у строки «${r.article || id}» нет артикула, количества или габаритов.`);
+        }
+      }
+      const used = [...(raw.pool || [])];
+      for (const p of raw.pallets || []) {
+        if (!p || !Array.isArray(p.lanes) || p.lanes.length !== 2) throw new Error(`${what}: у паллеты должно быть две шеренги.`);
+        p.lanes.forEach((l) => used.push(...l));
+      }
+      const seen = new Set();
+      for (const id of used) {
+        if (!ids.has(id)) throw new Error(`${what}: ссылка на несуществующую строку ${id}.`);
+        if (seen.has(id)) throw new Error(`${what}: строка ${id} стоит в двух местах.`);
+        seen.add(id);
+      }
+      // Строки, которые нигде не стоят, не теряем — уходят в «Не распределено».
+      raw.pool = [...(raw.pool || []), ...[...ids].filter((id) => !seen.has(id))];
+    };
+    checkDoc(cur, 'Раскладка');
+    if (data.initial) checkDoc(data.initial, 'Исходное состояние');
+    const doc = PZE.deserializeDoc(JSON.stringify(cur));
+    PZE.normalize(doc);
+    return { data, doc, initialPayload: data.initial ? PZE.serializeDoc(PZE.deserializeDoc(JSON.stringify(data.initial))) : null };
+  }
+
+  async function openDraftFile(file) {
+    const { data, doc, initialPayload } = parseDraftJson(await file.text());
+    // Настройки, с которыми раскладка собиралась (паллета, лимит высоты, порог деления):
+    // без них свес/перевысота считались бы по другим размерам.
+    const s = data.settings || {};
+    const changed = [];
+    const setIf = (input, v, label) => {
+      if (v == null || v === '' || String(input.value) === String(v)) return;
+      input.value = v; changed.push(label);
+    };
+    setIf(inLength, s.palletLengthMm, 'длина паллеты');
+    setIf(inWidth, s.palletWidthMm, 'ширина паллеты');
+    setIf(inMaxHeight, s.maxHeightCm, 'макс. высота');
+    if (s.splitThresholdCm !== undefined) setIf(inSplitThreshold, s.splitThresholdCm == null ? '' : s.splitThresholdCm, 'порог деления');
+    if (changed.length) saveSettings();
+
+    editorDoc = doc;
+    state.fileName = data.fileName || file.name;
+    state.missing = Array.isArray(data.missing) ? data.missing : [];
+    state.initialDocPayload = initialPayload || PZE.serializeDoc(doc);
+    inOrderNumber.value = data.orderNumber || '';
+    inShipDate.value = data.shipmentDate || nearestFridayIso();
+    readConfigFromUI();
+    const id = genHistoryId();
+    state.activeHistoryId = id;
+    setActiveHistoryId(id);
+    previewCache = {};
+    resetUndo();
+    showEditor();
+    onDocChanged();
+    showInfo(`Открыт черновик «${file.name}»: паллет ${doc.pallets.length}, в «Не распределено» строк: ${doc.pool.length}.` +
+      (changed.length ? ` Настройки взяты из черновика: ${changed.join(', ')}.` : ''));
+  }
+
+  // Готовая раскладка из Excel («Скачать Excel») → редактор. Габариты — как в файле (так
+  // короба и стоят); вес и габариты «как в справочнике» (для кнопок поворота) — из справочника,
+  // если он доступен. Порядок в шеренге: совпадает с авто — паллета в авто, иначе «вручную»
+  // с порядком из файла.
+  async function openLayoutXlsx(file, rows, fmtRows) {
+    const { lines, byBlocks } = PZ.parseLayout(rows, fmtRows);
+    let lookup = null, lookupErr = '';
+    try { lookup = await ensureLookup(); } catch (e) { lookupErr = e.message; }
+    const noLookup = new Set();
+    const PERMS = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+    const close = (a, b) => Math.abs(a - b) < 1e-6;
+    const made = lines.map((ln) => {
+      const d = lookup && lookup.get(PZ.normArticle(ln.article));
+      if (!d) noLookup.add(ln.article);
+      const cur = [ln.lengthCm, ln.widthCm, ln.heightCm];
+      let base = cur, perm = [0, 1, 2];
+      if (d) {
+        const b = [d.lengthCm, d.widthCm, d.heightCm];
+        const p = PERMS.find((pp) => pp.every((k, i) => close(b[k], cur[i])));
+        if (p) { base = b; perm = p; }
+      }
+      const weight = ln.weightPerBoxKg != null ? ln.weightPerBoxKg : (d ? d.weightPerBoxKg : 0);
+      return { ln, row: PZ.makeArticle({ article: ln.article, qty: ln.qty, lengthCm: cur[0], widthCm: cur[1], heightCm: cur[2],
+        weightPerBoxKg: weight, baseL: base[0], baseW: base[1], baseH: base[2], perm }) };
+    });
+    const doc = { rows: {}, pool: [], pallets: [] };
+    const nPal = Math.max(0, ...made.map((m) => m.ln.pallet || 0));
+    for (let i = 0; i < nPal; i++) doc.pallets.push(PZE.newPallet(false));
+    for (const { ln, row } of made) {
+      doc.rows[row.id] = row;
+      if (ln.pallet) doc.pallets[ln.pallet - 1].lanes[ln.lane - 1].push(row.id);
+      else doc.pool.push(row.id);
+    }
+    if (doc.pallets.length === 0) doc.pallets.push(PZE.newPallet(true));
+    let manual = 0;
+    // Ручная раскладка блоками — порядок в блоке не значим (правило: от края к центру по высоте).
+    doc.pallets.forEach((p) => {
+      const isAuto = byBlocks || p.lanes.every((ids) => {
+        const hs = ids.map((id) => doc.rows[id].stackHeightCm);
+        const arc = PZ.arcOrderPreview(ids.map((id) => doc.rows[id])).map((r) => r.stackHeightCm);
+        return hs.every((h, i) => close(h, arc[i]));
+      });
+      p.autoSort = isAuto;
+      if (!isAuto) manual++;
+    });
+    PZE.normalize(doc);
+
+    editorDoc = doc;
+    state.fileName = file.name;
+    state.missing = [];
+    state.initialDocPayload = PZE.serializeDoc(doc);
+    const m = /(?:№|заказ\D*)\s*(\d+)/i.exec(file.name || '');
+    inOrderNumber.value = m ? m[1] : '';
+    inShipDate.value = nearestFridayIso();
+    readConfigFromUI();
+    const id = genHistoryId();
+    state.activeHistoryId = id;
+    setActiveHistoryId(id);
+    previewCache = {};
+    resetUndo();
+    showEditor();
+    onDocChanged();
+    const parts = [`Открыта готовая раскладка «${file.name}»: паллет ${doc.pallets.length}, строк ${made.length}` +
+      (byBlocks ? ' (блоки между пустыми строками, два блока — одна паллета)' : '')];
+    if (doc.pool.length) parts.push(`без номера паллеты — в «Не распределено»: ${doc.pool.length}`);
+    if (manual) parts.push(`порядок в шеренгах как в файле — паллет в режиме «вручную»: ${manual}`);
+    showInfo(parts.join('; ') + '.');
+    if (lookupErr) showError('Справочник недоступен (' + lookupErr + ') — вес коробов неизвестен, считается 0. Нажмите «Справочник», когда он будет доступен.');
+    else if (noLookup.size) showError(`Нет в справочнике, вес считается 0: ${[...noLookup].join(', ')}.`);
+    else showError(state.lookupWarning || '');
+  }
+
   async function handleFile(file) {
     showError('');
     showInfo('');
     try {
+      if (/\.json$/i.test(file.name || '') || file.type === 'application/json') {
+        await openDraftFile(file);
+        return;
+      }
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array', cellDates: false });
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -3644,7 +3861,8 @@ PZE.deserializeDoc = function (json) {
       const fmtRows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
 
       if (PZ.looksLikeLayout(rows) && !PZ.looksLikeOrder(rows)) {
-        throw new Error('Это похоже на уже готовую раскладку (с колонками габаритов) — такие файлы больше не загружаются напрямую. Загрузите исходный заказ (артикул + количество), раскладка собирается внутри редактора.');
+        await openLayoutXlsx(file, rows, fmtRows);
+        return;
       }
       const lines = PZ.parseOrder(rows, fmtRows);
       const lookup = await ensureLookup();
@@ -3726,7 +3944,7 @@ PZE.deserializeDoc = function (json) {
       // Старые записи истории с уже готовой раскладкой (загружались так до того, как
       // эту возможность убрали из приложения) — открыть по-старому уже нельзя, но пусть
       // хотя бы остаются в списке и честно объясняют, а не падают молча.
-      showError('Этот файл был сохранён как уже готовая раскладка — такой формат больше не поддерживается для повторного открытия. Загрузите исходный заказ заново.');
+      showError('Этот файл был сохранён как уже готовая раскладка — такую запись истории открыть нельзя. Загрузите сам файл раскладки (или исходный заказ) заново.');
       return;
     }
     let doc;
