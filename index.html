@@ -36,31 +36,42 @@
   }
   button, input { font-family: inherit; }
   button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  :is(button, summary, input, [role="button"]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
-  .topBar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-  .titleBlock { min-width: 240px; }
+  .topBar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 16px; margin-bottom: 20px; }
   h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; letter-spacing: 0.2px; }
-  .subtitle { color: var(--muted); font-size: 14px; font-weight: 500; margin: 0 0 20px; }
+  .subtitle { color: var(--muted); font-size: 14px; line-height: 1.45; margin: 0; }
   .topActions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .topBar > .topActions { flex-wrap: nowrap; gap: 8px; }
   .circleBtn {
     width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--card-bg);
-    color: var(--text); font-weight: 700; font-size: 15px; cursor: pointer; display: inline-flex;
-    align-items: center; justify-content: center; padding: 0; flex-shrink: 0;
+    color: var(--text); cursor: pointer; display: grid; place-items: center; padding: 0; flex-shrink: 0;
   }
   .circleBtn:hover { background: var(--hover); }
 
   .themeSwitch {
-    position: relative; width: 60px; height: 32px; border-radius: 999px; border: 1px solid var(--border);
-    background: var(--card-bg); cursor: pointer; padding: 0 7px; display: inline-flex; align-items: center;
-    justify-content: space-between; flex-shrink: 0;
+    --theme-icon-size: 28px; --theme-gap: 4px; --theme-inset: 2px;
+    position: relative; height: 36px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--card-bg); cursor: pointer; color: var(--text); padding: 0 var(--theme-inset);
+    display: grid; grid-template-columns: repeat(2, var(--theme-icon-size)); gap: var(--theme-gap); align-items: center; flex-shrink: 0;
   }
   .themeSwitch:hover { background: var(--hover); }
-  .themeSwitch .themeIcon { font-size: 14px; line-height: 1; position: relative; z-index: 1; }
+  .themeSwitch .themeIcon { display: grid; place-items: center; width: var(--theme-icon-size); height: var(--theme-icon-size); position: relative; z-index: 1; }
   .themeSwitch .themeThumb {
-    position: absolute; top: 2px; left: 2px; width: 26px; height: 26px; border-radius: 50%;
+    position: absolute; top: 50%; left: var(--theme-inset); width: var(--theme-icon-size); height: var(--theme-icon-size);
+    border-radius: 50%; transform: translateY(-50%);
     background: var(--accent); transition: transform .18s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.35);
   }
-  :root[data-theme="dark"] .themeSwitch .themeThumb { transform: translateX(28px); }
+  .themeSwitch[aria-pressed="true"] .themeThumb { transform: translate(calc(var(--theme-icon-size) + var(--theme-gap)), -50%); }
+  .themeSwitch[aria-pressed="false"] .themeIcon:first-child,
+  .themeSwitch[aria-pressed="true"] .themeIcon:last-child { color: #fff; }
+  @media (max-width: 420px) {
+    .topBar { gap: 8px 12px; align-items: center; }
+    .titleBlock { display: contents; }
+    .topBar h1 { grid-row: 1; margin: 0; }
+    .topBar > .topActions { grid-column: 2; grid-row: 1; }
+    .subtitle { grid-column: 1 / -1; font-size: 13px; }
+  }
 
   .dropzone {
     border: 2px dashed #b9bcc2; border-radius: 12px; background: var(--card-bg);
@@ -74,6 +85,7 @@
     margin-top: 14px; padding: 12px 14px; border-radius: 8px; background: #fbeceb;
     color: var(--danger); font-size: 14px; font-weight: 600; border: 1px solid #f0c9c6;
   }
+  .errorBox, .infoBox, .summaryLine { overflow-wrap: anywhere; }
   :root[data-theme="dark"] .errorBox { background: #3a2220; border-color: #5a2f2b; }
 
   .settingsBar { display: flex; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
@@ -87,10 +99,10 @@
 
   .settingsPanel {
     margin-top: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
-    padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px;
+    padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 14px;
     align-items: end; /* поля в одну линию, даже если подпись переносится на 2 строки */
   }
-  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .field label { font-size: 12px; color: var(--muted); font-weight: 700; display: flex; align-items: center; gap: 5px; }
   /* Подробное объяснение настройки — во всплывающей подсказке значка, а не текстом под
      полем: раньше эти сноски раздували панель настроек по высоте без особой пользы. */
@@ -101,17 +113,15 @@
   }
   .field input {
     font-weight: 500; font-size: 14px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
-    background: var(--input-bg); color: var(--text);
+    background: var(--input-bg); color: var(--text); min-width: 0; width: 100%;
   }
 
   .resultsHeader { display: flex; align-items: center; justify-content: space-between; margin: 24px 0 12px; flex-wrap: wrap; gap: 10px; }
-  /* Тулбар редактора — строго одна строка: если не помещается по ширине, едет вбок
-     горизонтальным скроллом целиком (как строки с артикулами), а не переносится на
-     несколько уровней. Кнопки/подписи тут компактнее, чем в остальном интерфейсе.
-     Строка сводки («Артикулов в работе…») может при нехватке места уйти на свою
-     отдельную строку выше — а вот сами кнопки между собой уже не разъезжаются. */
-  #editorSection .topActions { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
-  .topActions .ghostBtn, .topActions .primaryBtn { padding: 6px 10px; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+  .resultsHeader .topActions { gap: 6px; max-width: 100%; }
+  .topActions .ghostBtn, .topActions .primaryBtn, .topActions .modalClose {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 30px;
+    padding: 6px 10px; font-size: 12px; line-height: 1.2; text-align: center; max-width: 100%;
+  }
   .topActions .orderModeToggle { padding: 6px 9px; font-size: 11px; gap: 5px; white-space: nowrap; flex-shrink: 0; }
   .summaryLine { font-size: 13px; font-weight: 600; color: var(--muted); }
   .primaryBtn {
@@ -120,15 +130,15 @@
   }
   .primaryBtn:hover { background: var(--accent-hover); }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px; }
   .thumb {
     background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
-    cursor: pointer; transition: box-shadow .15s, transform .15s;
+    cursor: pointer; transition: box-shadow .15s, transform .15s; display: flex; flex-direction: column;
   }
   .thumb:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.18); transform: translateY(-2px); }
   .thumb img { display: block; width: 100%; height: auto; }
-  .thumbCaption { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; font-size: 13px; font-weight: 700; }
-  .smallBtn { border: 1px solid var(--border); background: var(--card-bg); color: var(--text); border-radius: 6px; padding: 4px 8px; font-weight: 700; font-size: 11px; cursor: pointer; }
+  .thumbCaption { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; font-size: 13px; font-weight: 700; margin-top: auto; }
+  .smallBtn { border: 1px solid var(--border); background: var(--card-bg); color: var(--text); border-radius: 6px; padding: 4px 8px; min-height: 26px; line-height: 1.2; font-weight: 700; font-size: 11px; cursor: pointer; }
   .smallBtn:hover { background: var(--hover); }
 
   .emptyState { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; font-weight: 600; }
@@ -142,14 +152,15 @@
      теми же колонками (chipCols), поэтому значения реально выстраиваются по столбцам, а не
      просто визуально похожи. Каждая строка — строго один уровень (без переноса на 2 строки):
      если не влезает по ширине, весь список едет вбок горизонтальным скроллом целиком. */
-  .chipRow { display: flex; flex-direction: column; gap: 3px; min-height: 8px; overflow-x: auto; }
+  .chipTable { overflow-x: auto; padding: 2px; }
+  .chipRow { display: flex; flex-direction: column; gap: 3px; min-height: 8px; min-width: max-content; }
   .editorPool.dragOver, .editorLane.dragOver { outline: 2px dashed var(--accent); outline-offset: -2px; }
 
   /* Колонки шапки и строки — ОДИН и тот же список, иначе заголовок разъедется с данными.
      Паллета/Шеренга и Высота — самые «текстовые» заголовки, поэтому шире остальных. */
   .chipHeaderRow {
-    display: grid; grid-template-columns: 18px 72px 64px 54px 140px 132px 56px 112px;
-    align-items: center; gap: 6px; padding: 0 8px 6px; min-width: max-content;
+    display: grid; grid-template-columns: 18px 72px 67px 54px 140px 132px 56px 112px;
+    align-items: center; gap: 6px; padding: 0 8px 6px; min-width: max-content; border-inline: 5px solid transparent; border-right-width: 1px;
     font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em;
   }
   .chipHeaderRow > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -157,7 +168,7 @@
 
   .chip {
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px;
-    display: grid; grid-template-columns: 18px 72px 64px 54px 140px 132px 56px 112px;
+    display: grid; grid-template-columns: 18px 72px 67px 54px 140px 132px 56px 112px;
     align-items: center; gap: 6px; min-width: max-content;
   }
   /* Внутри шеренги вдвое меньше ширины, чем над общим пулом (две колонки на странице
@@ -166,7 +177,7 @@
      где места хватает, колонки остаются широкими и полностью читаемыми. */
   .editorLane .chipHeaderRow,
   .editorLane .chip {
-    grid-template-columns: 14px 62px 44px 30px 110px 70px 40px 102px; gap: 4px; padding-left: 5px; padding-right: 5px;
+    grid-template-columns: 14px 60px 67px 30px 110px 70px 40px 102px; gap: 4px; padding-left: 5px; padding-right: 5px;
   }
   /* В шеренге «шт»/«см» не пишем — единицы есть в заголовке колонки, а ширины в обрез. */
   .editorLane .unit { display: none; }
@@ -183,12 +194,43 @@
   }
   .chipHandle:hover { color: var(--text); }
   .chipHandle:active { cursor: grabbing; }
-  /* Высота столбика — главный ориентир при ручной раскладке, поэтому не мелкая серая
-     подпись где-то сбоку, а заметный цветной значок, который сразу бросается в глаза. */
+  /* Высота в сантиметрах выровнена в каждой строке, раскладка по рядам справа от неё. */
   .chipHeight {
-    background: var(--accent); color: #fff; font-weight: 800; font-size: 12px; line-height: 1;
-    padding: 4px 0; border-radius: 999px; white-space: nowrap; text-align: center;
+    display: flex; align-items: center; gap: 5px; min-height: 28px; margin: 0; padding: 0;
+    background: transparent; border: 0; color: var(--text);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
   }
+  .chipHeightHeader { justify-self: start; }
+  .chipHeightValue {
+    display: grid; place-items: center; flex: 0 0 auto; min-width: 28px; min-height: 28px;
+    font-size: 13px; font-weight: 700; line-height: 16px;
+  }
+  button.chipHeight { cursor: pointer; }
+  .chipHeight small {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--muted);
+    font-size: 10px; font-weight: 600; line-height: 14px; text-decoration: underline dotted; text-underline-offset: 2px;
+  }
+  .chipHeight:is(:hover, :focus-visible) small { color: var(--text); text-decoration-style: solid; }
+  .editorLayerBar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 8px; }
+  .choiceMenu { position: relative; flex-shrink: 0; }
+  .choiceMenu summary { list-style: none; }
+  .choiceMenu summary::-webkit-details-marker { display: none; }
+  .choiceMenu summary::after {
+    content: ''; display: inline-block; margin: 0 2px 2px 8px; width: 5px; height: 5px;
+    border: solid var(--muted); border-width: 0 1px 1px 0; transform: rotate(45deg);
+  }
+  .choiceOptions {
+    position: fixed; z-index: 5; inset: auto; margin: 0;
+    max-height: 220px; overflow-y: auto; background: var(--card-bg); padding: 4px;
+    border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 18px var(--overlay);
+  }
+  .choiceOptions button {
+    display: block; text-align: left; width: 100%; border: 0; border-radius: 5px;
+    background: transparent; color: var(--text); padding: 6px 9px; font-size: 12px; cursor: pointer; white-space: nowrap;
+  }
+  .choiceOptions button:hover, .choiceOptions button:focus-visible { background: var(--hover); }
+  .choiceOptions button[aria-current="true"] { color: var(--accent); font-weight: 700; }
+  .chipPositionField input[data-pending] { border-color: var(--accent); }
   .chipField {
     display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 11px;
     line-height: 1; color: var(--muted); font-weight: 600; white-space: nowrap;
@@ -218,6 +260,7 @@
   .laneInfo { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
   .editorPalletStats { font-size: 12px; font-weight: 600; color: var(--muted); }
   .newPalletDrop {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 14px;
     border: 2px dashed var(--border); border-radius: 10px; padding: 18px; text-align: center;
     color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 16px;
   }
@@ -226,6 +269,7 @@
     border: 1px solid var(--border); background: var(--card-bg); border-radius: 8px;
     padding: 10px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
   }
+  .wrap > .infoBox { margin-top: 10px; }
   .chipPositionField { font-weight: 700; }
   /* Здесь, в отличие от остальных полей строки, стрелочки оставляем — щёлкать по паллете/
      шеренге на единицу вверх-вниз действительно удобнее, чем перепечатывать число. */
@@ -244,15 +288,15 @@
   .chipBtn:hover { background: var(--hover); }
   .chipBtn:disabled { opacity: 0.35; cursor: default; }
   .chipBtnDanger:hover { background: #fbeceb; color: var(--danger); border-color: #f0c9c6; }
-  .chipMove { font-size: 11px; font-weight: 600; padding: 3px 4px; border-radius: 6px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); }
 
   .editorPallet { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
-  .editorPalletHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+  .editorPalletHead { display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px 12px; }
   .editorPalletHead b { font-size: 14px; }
-  .editorPalletHeadActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .editorPalletHeadActions .orderModeToggle { padding: 5px 10px; font-size: 11px; gap: 5px; }
-  .editorLanes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  @media (max-width: 620px) { .editorLanes { grid-template-columns: 1fr; } }
+  .editorPalletHeadActions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  .editorPalletHeadActions .orderModeToggle { padding: 4px 8px; min-height: 26px; font-size: 11px; gap: 5px; }
+  .editorLanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+  @media (max-width: 1100px) { .editorLanes { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 640px) { .editorPalletHeadActions { flex-basis: 100%; margin-left: 0; } }
   /* min-width: 0 обязателен: без него grid-ячейка по умолчанию не может стать уже своего
      содержимого (широкие строки с min-width:max-content внутри) и шеренга вылезает за
      пределы своего блока вместо того, чтобы самой прокручиваться вбок. */
@@ -265,7 +309,7 @@
     color: var(--text); cursor: pointer; background: var(--card-bg); border: 1px solid var(--border);
     border-radius: 8px; padding: 8px 12px;
   }
-  .orderModeToggle input { cursor: pointer; }
+  .orderModeToggle input { cursor: pointer; margin: 0; }
 
   .chip.insertBefore { box-shadow: inset 3px 0 0 var(--accent); }
   .chip.insertAfter { box-shadow: inset -3px 0 0 var(--accent); }
@@ -276,20 +320,20 @@
 
   .lightbox, .modalOverlay {
     position: fixed; inset: 0; background: var(--overlay); display: flex; flex-direction: column;
-    align-items: center; justify-content: center; padding: 24px; z-index: 50;
+    align-items: center; justify-content: center; padding: clamp(12px, 3vw, 24px); z-index: 50;
   }
-  .lightboxTop { width: 100%; max-width: 1400px; display: flex; align-items: center; justify-content: space-between; color: #fff; margin-bottom: 10px; }
-  .lightboxTop h2 { font-size: 16px; font-weight: 700; margin: 0; }
+  .lightboxTop { width: 100%; max-width: 1400px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #fff; margin-bottom: 10px; }
+  .lightboxTop h2 { font-size: 16px; font-weight: 700; margin: 0; overflow-wrap: anywhere; }
   .lightboxClose { background: transparent; border: 1px solid rgba(255,255,255,0.4); color: #fff; border-radius: 6px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
-  .lightbox img { max-width: 100%; max-height: 82vh; border-radius: 8px; background: #fff; }
+  .lightbox img { max-width: 100%; max-height: 82vh; min-height: 0; object-fit: contain; border-radius: 8px; background: #fff; }
 
   .modalBox {
     background: var(--card-bg); color: var(--text); border-radius: 12px; max-width: 640px; width: 100%;
     max-height: 84vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.3);
   }
-  .modalHeader { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--border); }
-  .modalHeader h2 { font-size: 17px; font-weight: 700; margin: 0; }
-  .modalBody { padding: 18px 22px; overflow-y: auto; font-size: 14px; line-height: 1.55; font-weight: 500; }
+  .modalHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 8px 12px; padding: 14px clamp(12px, 4vw, 22px); border-bottom: 1px solid var(--border); }
+  .modalHeader h2 { font-size: 17px; font-weight: 700; margin: 0; overflow-wrap: anywhere; }
+  .modalBody { min-height: 0; padding: 14px clamp(12px, 4vw, 22px); overflow: auto; overflow-wrap: anywhere; font-size: 14px; line-height: 1.55; font-weight: 500; }
   .modalBody h3 { font-size: 14px; font-weight: 700; margin: 18px 0 6px; }
   .modalBody h3:first-child { margin-top: 0; }
   .modalBody ul { margin: 6px 0; padding-left: 20px; }
@@ -298,18 +342,27 @@
 
   .historyEmpty { color: var(--muted); font-weight: 600; text-align: center; padding: 30px 0; }
   .historyRow {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
     padding: 12px 0; border-bottom: 1px solid var(--border);
   }
   .historyRow:last-child { border-bottom: none; }
+  .historyInfo { flex: 1 1 180px; min-width: 0; }
   .historyName { font-size: 14px; font-weight: 700; }
   .historyMeta { font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
-  .historyActions { display: flex; gap: 6px; flex-shrink: 0; }
+  .historyActions { display: flex; gap: 6px; flex-wrap: wrap; }
   .modalClose {
     background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 6px;
-    padding: 6px 12px; font-weight: 700; cursor: pointer;
+    padding: 6px 12px; min-height: 30px; line-height: 1.2; font-weight: 700; cursor: pointer;
   }
   .modalClose:hover { background: var(--hover); }
+  dialog.modalBox { display: none; border: 1px solid var(--border); padding: 0; width: min(440px, calc(100% - 32px)); }
+  dialog.modalBox[open] { display: flex; }
+  dialog.modalBox::backdrop { background: var(--overlay); }
+  #editorDialogForm { display: flex; flex-direction: column; min-height: 0; }
+  #editorDialogMessage { white-space: pre-line; margin: 0; }
+  #editorDialogMessage + .field { margin-top: 12px; }
+  #editorDialogActions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: stretch; gap: 8px; padding: 0 clamp(12px, 4vw, 22px) 14px; }
+  #editorDialogActions button { min-height: 34px; padding: 6px 12px; font-size: 13px; line-height: 1.2; }
 
   :root[data-theme="dark"] {
     --bg: #17181a; --card-bg: #212226; --input-bg: #17181a; --border: #34363b; --text: #f1f1f2; --muted: #9a9ca1;
@@ -330,16 +383,16 @@
       <p class="subtitle">Загрузите Excel-файл заказа — приложение поможет распределить его по паллетам и построит карточки с видами и ракурсами. Работает полностью локально, в браузере.</p>
     </div>
     <div class="topActions">
-      <button type="button" class="circleBtn" id="helpBtn" title="Справка" aria-label="Справка">?</button>
+      <button type="button" class="circleBtn" id="helpBtn" title="Справка" aria-label="Справка"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 8a4 4 0 1 1 6.6 3c-1.6 1.3-2.6 1.8-2.6 4"/><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/></svg></button>
       <button type="button" class="themeSwitch" id="themeToggle" title="Переключить тему" aria-label="Переключить тему" aria-pressed="false">
-        <span class="themeIcon" aria-hidden="true">☀</span>
-        <span class="themeThumb"></span>
-        <span class="themeIcon" aria-hidden="true">☾</span>
+        <span class="themeIcon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19m0-14-1.5 1.5m-11 11L5 19"/></svg></span>
+        <span class="themeThumb" aria-hidden="true"></span>
+        <span class="themeIcon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 4a8 8 0 1 0 8 8c-4.7 1.2-9.2-3.3-8-8Z"/></svg></span>
       </button>
     </div>
   </div>
 
-  <div class="dropzone" id="dropzone">
+  <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Выбрать файл заказа или раскладки">
     <div class="dzTitle">Перетащите .xlsx сюда или нажмите, чтобы выбрать файл</div>
     <div class="dzHint">Заказ или готовая раскладка (.xlsx, «Черновик JSON»). Данные не покидают ваш компьютер — обработка происходит прямо в браузере</div>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.json" hidden />
@@ -384,13 +437,7 @@
       <div class="summaryLine" id="editorSummary"></div>
       <div class="topActions">
         <button type="button" class="ghostBtn" id="undoBtn" title="Отменить последнее действие (Ctrl+Z)" disabled>↶ Отменить</button>
-        <label class="orderModeToggle" title="Куда девать освободившиеся/недостающие короба при изменении количества на карточке вручную.">
-          Излишек →
-          <select id="qtyOverflowMode" class="chipMove" style="width:auto;">
-            <option value="pool">в остаток</option>
-            <option value="lane">в другую шеренгу</option>
-          </select>
-        </label>
+        <div id="qtyOverflowMode" title="Куда переносить освободившиеся короба при ручном изменении количества."></div>
         <button type="button" class="ghostBtn" id="autoLayoutBtn" title="Разложить то, что в «Не распределено»: сначала в свободное место существующих паллет, потом на новые; уже разложенное не трогается (черновая раскидка — дальше доводите руками)">Разложить авто</button>
         <button type="button" class="ghostBtn" id="addPalletBtn" title="Добавить паллету">+ Паллета</button>
         <button type="button" class="ghostBtn" id="refreshLookupBtn" title="Обновить справочник габаритов">Справочник</button>
@@ -404,7 +451,7 @@
 
     <div class="editorPool" id="editorPoolBox">
       <div class="editorPoolTitle">Не распределено</div>
-      <div class="chipRow" id="poolChips"></div>
+      <div class="chipTable"><div class="chipRow" id="poolChips"></div></div>
     </div>
 
     <div id="editorPallets"></div>
@@ -422,7 +469,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div class="appFooter">Паллетайзер <span id="appVersion">v1.12.0</span></div>
+  <div class="appFooter">Паллетайзер <span id="appVersion">v1.13.0</span></div>
 </div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -432,6 +479,23 @@
   </div>
   <img id="lightboxImg" alt="" />
 </div>
+
+<dialog class="modalBox" id="editorDialog" aria-labelledby="editorDialogTitle">
+  <div class="modalHeader"><h2 id="editorDialogTitle"></h2></div>
+  <form id="editorDialogForm" method="dialog">
+    <div class="modalBody">
+      <p id="editorDialogMessage"></p>
+      <div class="field" id="editorDialogField" hidden>
+        <label for="editorDialogValue" id="editorDialogLabel"></label>
+        <input id="editorDialogValue" type="number" step="1" required>
+      </div>
+    </div>
+    <div id="editorDialogActions">
+      <button type="button" value="cancel" class="ghostBtn">Отмена</button>
+      <button type="submit" value="apply" class="primaryBtn" id="editorDialogApply">Применить</button>
+    </div>
+  </form>
+</dialog>
 
 <div class="modalOverlay" id="historyModal" hidden>
   <div class="modalBox">
@@ -457,7 +521,7 @@
       <p>Перетащите файл <code>.xlsx</code> с заказом (артикул + количество) в область загрузки или нажмите на неё и выберите файл. Всё считается прямо в браузере — файл никуда не отправляется.</p>
       <p>Туда же можно загрузить <b>готовую раскладку</b> — она откроется в редакторе, как будто её только что собрали:</p>
       <ul>
-        <li><b>Excel из приложения</b> («Excel» / «Скачать Excel»): паллеты, шеренги и порядок столбиков — как в файле.</li>
+        <li><b>Excel из приложения</b> («Excel» / «Скачать Excel»): паллеты, слои, шеренги и порядок столбиков — как в файле.</li>
         <li><b>Ручная раскладка в Excel</b>: колонки «Артикул», «Кол-во коробов», «Длина», «Ширина», «Высота» (как стоит короб), по желанию «вес шт». Шеренги разделяются пустыми строками, каждые два соседних блока — одна паллета (первый блок — шеренга 1, второй — шеренга 2). Порядок внутри шеренги — авто.</li>
         <li><b>Черновик JSON</b> (кнопка «Черновик JSON»): раскладка целиком, вместе с номером заказа, датой и настройками паллеты; «Сбросить» вернёт исходное состояние из черновика.</li>
       </ul>
@@ -471,10 +535,12 @@
 
       <h3>Как строится раскладка</h3>
       <ul>
-        <li>Паллета — это две шеренги вдоль длинной стороны, заполняются вручную или автоматически из редактора.</li>
+        <li>На каждом слое паллеты две шеренги вдоль длинной стороны. Слой на картонной прокладке заполняется вручную.</li>
         <li>Короба внутри шеренги (в авто-режиме) ставятся от края к центру по возрастанию высоты стопки.</li>
         <li>Шеренги стыкуются между собой по центральной линии ширины паллеты.</li>
-        <li>Короба никогда не разворачиваются и не сдвигаются автоматически, даже если что-то не помещается — раскладка всегда честно отражает те размеры, что указаны в справочнике.</li>
+        <li>Ориентацию коробов меняет пользователь.</li>
+        <li><b>Два ряда:</b> первый клик «2 ряда» делит короба пополам. Нажмите на получившееся количество, чтобы изменить второй ряд, или введите 0 для возврата к одной стопке.</li>
+        <li><b>Слой на прокладке:</b> нажмите «Добавить слой на прокладке», выберите высоту от поддона и перенесите короба в шеренги 3 и 4. Прокладка 120×80×3 см показана целиком. Участки опоры выделены на виде сверху. Если под слоем есть пустоты, появится напоминание проверить опору при сборке. «Разложить авто» пропускает паллеты со слоем на прокладке.</li>
       </ul>
 
       <h3>Если короб не помещается</h3>
@@ -1004,11 +1070,17 @@ PZ.makeArticle = (a) => ({
   id: a.id || 'r' + (_pzNextId++),
   article: a.article, qty: a.qty, lengthCm: a.lengthCm, widthCm: a.widthCm,
   heightCm: a.heightCm, weightPerBoxKg: a.weightPerBoxKg,
+  secondRowQty: a.secondRowQty,
   baseL: a.baseL != null ? a.baseL : a.lengthCm,
   baseW: a.baseW != null ? a.baseW : a.widthCm,
   baseH: a.baseH != null ? a.baseH : a.heightCm,
   perm: Array.isArray(a.perm) && a.perm.length === 3 ? a.perm.slice() : [0, 1, 2],
-  get stackHeightCm() { return this.heightCm * this.qty; },
+  get secondQty() {
+    if (this.secondRowQty == null || this.qty < 2) return 0;
+    return this.secondRowQty === 0 ? Math.floor(this.qty / 2) : Math.min(this.qty - 1, this.secondRowQty);
+  },
+  get occupiedWidthCm() { return this.widthCm * (this.secondQty ? 2 : 1); },
+  get stackHeightCm() { return this.heightCm * Math.max(this.qty - this.secondQty, this.secondQty); },
   get stackWeightKg() { return this.weightPerBoxKg * this.qty; },
 });
 // Гарантирует, что новые id (генерируемые при разбиении строк) не столкнутся с id,
@@ -1079,6 +1151,9 @@ PZ.parseLayout = function (sheetRows, formattedRows) {
   const cH = findCol((h) => h.includes('высота') && !h.includes('столб') && !h.includes('стопк') && !h.includes('паллет'));
   const cPal = findCol((h) => h.includes('паллет') && !h.includes('высота'));
   const cLane = findCol((h) => h.includes('шеренг'));
+  const cLayer = findCol((h) => h === 'слой');
+  const cCardboard = findCol((h) => h === 'уровень прокладки, см');
+  const cSecond = findCol((h) => h === 'коробов во втором ряду');
   const cWeight = findCol((h) => h.includes('вес') && !h.includes('арт') && !h.includes('общ') && !h.includes('груз') && !h.includes('итог'));
   const byBlocks = cPal < 0;
   let block = -1;
@@ -1112,8 +1187,16 @@ PZ.parseLayout = function (sheetRows, formattedRows) {
       else lane = group === 0 ? 1 : 2;
     }
     const wt = cWeight >= 0 ? PZ.parseNum(row[cWeight]) : NaN;
+    const layer = !byBlocks && PZ.parseNum(row[cLayer]) === 2 ? 2 : 1;
+    const cardboard = row[cCardboard] === 'Авто' ? null : PZ.parseNum(row[cCardboard]);
+    const second = PZ.parseNum(row[cSecond]);
+    if (Number.isFinite(second) && (!Number.isInteger(second) || second < 0 || second >= qty)) {
+      throw new Error(`строка ${i + 1} («${article}»): неверное количество во втором ряду.`);
+    }
     out.push({ article, qty: Math.round(qty), lengthCm: L, widthCm: W, heightCm: Hh,
-      weightPerBoxKg: wt >= 0 ? wt : null, pallet, lane });
+      weightPerBoxKg: wt >= 0 ? wt : null, pallet, lane, layer,
+      cardboard: cardboard === null || cardboard > 0 ? cardboard : undefined,
+      secondRowQty: Number.isFinite(second) ? second : undefined });
   }
   if (out.length === 0) throw new Error('в раскладке нет ни одной строки с артикулом.');
   return { lines: out, byBlocks };
@@ -1341,32 +1424,85 @@ PZ.lightenHsl = function (c, factor) {
 // строго в том порядке, в котором они переданы (нужно редактору для ручного режима
 // расстановки внутри шеренги). По умолчанию — обычное подтверждённое бизнес-правило:
 // всегда по дуге (короче к краю, выше к центру), порядок исходных данных не важен.
+const CardboardLengthCm = 120, CardboardWidthCm = 80, CardboardThicknessCm = 3;
+
+// Проверяем, что объединение верхних граней опор целиком покрывает основание стопки.
+function hasFullSupport(col, supports) {
+  const right = col.x0 + col.lengthCm, end = col.y0 + col.widthCm;
+  const bounds = [col.x0, right];
+  for (const s of supports) {
+    for (const x of [s.x0, s.x0 + s.lengthCm]) if (x > col.x0 && x < right) bounds.push(x);
+  }
+  bounds.sort((a, b) => a - b);
+  for (let i = 1; i < bounds.length; i++) {
+    if (bounds[i] - bounds[i - 1] <= PZE_EPS) continue;
+    const mid = (bounds[i - 1] + bounds[i]) / 2;
+    let covered = col.y0;
+    for (const s of supports) {
+      if (s.x0 > mid || s.x0 + s.lengthCm < mid || s.y0 > covered + PZE_EPS) continue;
+      covered = Math.max(covered, s.y0 + s.widthCm);
+      if (covered >= end - PZE_EPS) break;
+    }
+    if (covered < end - PZE_EPS) return false;
+  }
+  return true;
+}
+
 PZ.buildScene = function (pallet, config, title, options) {
   const manualOrder = !!(options && options.manualOrder);
   const palletLength = config.pallet.lengthMm / 10.0;
   const palletWidth = config.pallet.widthMm / 10.0;
   const centerX = palletLength / 2, centerY = palletWidth / 2;
   const columns = [];
+  const laneLengths = [];
   const colors = PZ.assignColors(pallet.groups.flatMap((g) => g.articles.map((a) => a.article)));
 
   pallet.groups.forEach((block, laneIdx) => {
     const ordered = manualOrder ? [...block.articles] : arcOrder(PZ.orderColumns(block));
-    if (ordered.length === 0) return;
     const laneLength = ordered.reduce((s, a) => s + a.lengthCm, 0);
+    laneLengths.push(laneLength);
     let x = centerX - laneLength / 2;
     const flushBelow = laneIdx % 2 === 0;
 
     for (const article of ordered) {
-      const y0 = flushBelow ? centerY - article.widthCm : centerY;
-      columns.push({
-        article, x0: x, y0, lengthCm: article.lengthCm, widthCm: article.widthCm,
-        color: colors.get(article.article), lane: laneIdx + 1,
+      const quantities = article.secondQty ? [article.qty - article.secondQty, article.secondQty] : [article.qty];
+      quantities.forEach((qty, depth) => {
+        const y0 = flushBelow ? centerY - (depth + 1) * article.widthCm : centerY + depth * article.widthCm;
+        const stack = quantities.length === 1 ? article : {
+          ...article, qty, stackHeightCm: article.heightCm * qty, stackWeightKg: article.weightPerBoxKg * qty,
+        };
+        columns.push({
+          article: stack, row: article, depth, x0: x, y0, lengthCm: article.lengthCm, widthCm: article.widthCm,
+          baseZ: PalletHeightCm, color: colors.get(article.article), lane: laneIdx + 1,
+        });
       });
       x += article.lengthCm;
     }
   });
 
-  return { columns, palletLengthCm: palletLength, palletWidthCm: palletWidth, title, centerX, centerY, maxHeightCm: config.maxHeightCm || 200, overhangCm: config.overhangCm || 0 };
+  let cardboard = null;
+  if (pallet.groups.length > 2) {
+    const lower = columns.filter((c) => c.lane <= 2);
+    const levels = [...new Set(lower.map((c) => c.article.stackHeightCm))].sort((a, b) => b - a);
+    const height = pallet.cardboardHeightCm ?? levels[0] ?? 0;
+    const supports = lower.filter((c) => Math.abs(c.article.stackHeightCm - height) <= PZE_EPS).sort((a, b) => a.y0 - b.y0);
+    cardboard = {
+      height, levels, supports, baseZ: PalletHeightCm + height, selectedHeight: pallet.cardboardHeightCm,
+      x0: centerX - CardboardLengthCm / 2, y0: centerY - CardboardWidthCm / 2,
+      lengthCm: CardboardLengthCm, widthCm: CardboardWidthCm,
+    };
+    cardboard.intersects = lower.some((c) => c.article.stackHeightCm > height + PZE_EPS &&
+      Math.min(c.x0 + c.lengthCm, cardboard.x0 + cardboard.lengthCm) - Math.max(c.x0, cardboard.x0) > PZE_EPS &&
+      Math.min(c.y0 + c.widthCm, cardboard.y0 + cardboard.widthCm) - Math.max(c.y0, cardboard.y0) > PZE_EPS);
+    for (const c of columns.filter((c) => c.lane > 2)) {
+      c.baseZ = cardboard.baseZ + CardboardThicknessCm;
+      c.offCardboard = !hasFullSupport(c, [cardboard]);
+      c.unsupported = !hasFullSupport(c, supports);
+    }
+  }
+  const totalHeightCm = Math.max(0, ...columns.map((c) => c.baseZ + c.article.stackHeightCm),
+    cardboard ? cardboard.baseZ + CardboardThicknessCm : 0);
+  return { columns, laneLengths, cardboard, totalHeightCm, palletLengthCm: palletLength, palletWidthCm: palletWidth, title, centerX, centerY, maxHeightCm: config.maxHeightCm || 200, overhangCm: config.overhangCm || 0 };
 };
 
 // ---------- Камера (перенос OrthoCamera.cs) ----------
@@ -1446,20 +1582,23 @@ function strokePolyPath(ctx, pts) {
 // ---------- Вид сверху ----------
 const VisualGapCm = 2.0;
 
-PZR.drawTopView = function (ctx, r, scene) {
+PZR.drawTopView = function (ctx, r, scene, layer = 1) {
   const titleH = 26;
   ctx.font = PZR.font('bold', 15);
   ctx.fillStyle = '#2A2C2F';
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.fillText('Вид сверху', r.left, r.top + 17);
+  const title = !scene.cardboard ? 'Вид сверху' : layer === 1 ? 'Вид сверху — нижний слой' : 'Вид сверху — слой на прокладке';
+  ctx.fillText(title, r.left, r.top + 17);
 
   const plot = rect(r.left, r.top + titleH, r.right, r.bottom);
 
-  const cols = scene.columns;
-  const minX = Math.min(0, cols.length ? Math.min(...cols.map(c => c.x0)) : 0);
-  const maxX = Math.max(scene.palletLengthCm, cols.length ? Math.max(...cols.map(c => c.x0 + c.lengthCm)) : scene.palletLengthCm);
-  const minY = Math.min(0, cols.length ? Math.min(...cols.map(c => c.y0)) : 0);
-  const maxY = Math.max(scene.palletWidthCm, cols.length ? Math.max(...cols.map(c => c.y0 + c.widthCm)) : scene.palletWidthCm);
+  const cols = scene.columns.filter((c) => (c.lane > 2 ? 2 : 1) === layer);
+  const board = layer === 2 ? scene.cardboard : null;
+  const objects = board ? [...cols, board] : cols;
+  const minX = Math.min(0, ...objects.map(c => c.x0));
+  const maxX = Math.max(scene.palletLengthCm, ...objects.map(c => c.x0 + c.lengthCm));
+  const minY = Math.min(0, ...objects.map(c => c.y0));
+  const maxY = Math.max(scene.palletWidthCm, ...objects.map(c => c.y0 + c.widthCm));
   const spanX = maxX - minX, spanY = maxY - minY;
 
   const pad = 20;
@@ -1474,6 +1613,12 @@ PZR.drawTopView = function (ctx, r, scene) {
   const palletRect = rect(p0[0], p0[1], p1[0], p1[1]);
   fillRoundRect(ctx, palletRect, 6, '#EEE6D3');
   strokeRoundRect(ctx, palletRect, 6, '#9A8F70', 1.4);
+  if (board) {
+    const [x, y] = Pt(board.x0, board.y0 + board.widthCm);
+    const outline = rect(x, y, x + board.lengthCm * scale, y + board.widthCm * scale);
+    fillRoundRect(ctx, outline, CardboardCornerCm * scale, '#E5C89C');
+    strokeRoundRect(ctx, outline, CardboardCornerCm * scale, '#8A642E', 2);
+  }
 
   ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.lineWidth = 1;
   for (let gx = 0; gx <= scene.palletLengthCm + 0.01; gx += 10) {
@@ -1492,6 +1637,18 @@ PZR.drawTopView = function (ctx, r, scene) {
   ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
   ctx.setLineDash([]);
 
+  if (layer === 2) {
+    const [x, y] = Pt(board.x0, board.y0 + board.widthCm);
+    ctx.save();
+    roundRectPath(ctx, x, y, board.lengthCm * scale, board.widthCm * scale, CardboardCornerCm * scale);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(160, 108, 45, 0.30)';
+    for (const c of scene.cardboard.supports) {
+      const [x, y] = Pt(c.x0, c.y0 + c.widthCm);
+      ctx.fillRect(x, y, c.lengthCm * scale, c.widthCm * scale);
+    }
+    ctx.restore();
+  }
   ctx.font = PZR.font('bold', 14);
   const labelFont = PZR.font('bold', 14), labelSmallFont = PZR.font('bold', 12);
 
@@ -1505,7 +1662,9 @@ PZR.drawTopView = function (ctx, r, scene) {
     grad.addColorStop(0, PZ.css(PZ.lightenHsl(col.color, 1.08)));
     grad.addColorStop(1, PZ.css(PZ.lightenHsl(col.color, 0.9)));
     fillRoundRect(ctx, box, 4, grad);
-    const problem = col.widthCm > scene.palletWidthCm / 2 + 1e-6 || col.x0 < -1e-6 || col.x0 + col.lengthCm > scene.palletLengthCm + 1e-6;
+    const problem = col.offCardboard || col.row.occupiedWidthCm > scene.palletWidthCm / 2 + PZE_EPS ||
+      scene.laneLengths[col.lane - 1] > scene.palletLengthCm + scene.overhangCm + PZE_EPS &&
+      (col.x0 < -PZE_EPS || col.x0 + col.lengthCm > scene.palletLengthCm + PZE_EPS);
     if (problem) strokeRoundRect(ctx, box, 4, '#D32F2F', 3);
     else strokeRoundRect(ctx, box, 4, '#2A2C2F', 1.3);
 
@@ -1617,7 +1776,7 @@ PZR.drawHeightProfile = function (ctx, r, scene) {
     ctx.strokeStyle = '#C9BEA0'; ctx.lineWidth = 1.2; ctx.strokeRect(bandRect.left, bandRect.top, bandRect.width, bandRect.height);
 
     ctx.font = PZR.font(600, 12); ctx.fillStyle = '#505255'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    ctx.fillText(`Шеренга ${lanes[i]}`, ox, bandTop - 8);
+    ctx.fillText(lanes[i] > 2 ? `Шеренга ${lanes[i]} — на прокладке` : `Шеренга ${lanes[i]}`, ox, bandTop - 8);
   }
 
   ctx.strokeStyle = 'rgba(42,91,214,0.78)'; ctx.lineWidth = 1.6; ctx.setLineDash([6, 4]);
@@ -1626,8 +1785,7 @@ PZR.drawHeightProfile = function (ctx, r, scene) {
   ctx.setLineDash([]);
 
   const visualGapCm = 2.0;
-  const tagFont = PZR.font('bold', 14);
-  for (const col of scene.columns) {
+  for (const col of scene.columns.filter((c) => c.depth ? c.row.secondQty > c.row.qty / 2 : c.row.secondQty <= c.row.qty / 2)) {
     const inset = Math.min(visualGapCm / 2, col.lengthCm * 0.15);
     const baseline = laneBaseY[col.lane];
     const x0 = ox + (col.x0 + inset) * scaleX;
@@ -1639,9 +1797,15 @@ PZR.drawHeightProfile = function (ctx, r, scene) {
     grad.addColorStop(0, PZ.css(PZ.lightenHsl(col.color, 1.1)));
     grad.addColorStop(1, PZ.css(PZ.lightenHsl(col.color, 0.88)));
     ctx.fillStyle = grad; ctx.fillRect(barRect.left, barRect.top, barRect.width, barRect.height);
-    ctx.strokeStyle = '#2A2C2F'; ctx.lineWidth = 1.1; ctx.strokeRect(barRect.left, barRect.top, barRect.width, barRect.height);
+    ctx.strokeStyle = col.offCardboard ? '#D32F2F' : '#2A2C2F';
+    ctx.lineWidth = 1.1; ctx.strokeRect(barRect.left, barRect.top, barRect.width, barRect.height);
 
-    const tag = `${col.article.article} · H${Math.round(col.article.stackHeightCm)}`;
+    const label = `${col.article.article} · H${Math.round(col.article.stackHeightCm)}`;
+    const nominalFont = PZR.font('bold', 14);
+    const nominalWidth = textWidth(ctx, nominalFont, label);
+    const tagFont = PZR.font('bold', Math.max(9, Math.min(14, Math.floor(14 * (w - 12) / nominalWidth))));
+    const tag = truncateText(ctx, label, tagFont, Math.max(0, w - 12));
+    if (!tag) continue;
     const tw = textWidth(ctx, tagFont, tag);
     const chipRect = rect(barRect.midX - tw / 2 - 5, barRect.top - 24, barRect.midX + tw / 2 + 5, barRect.top - 3);
     fillRoundRect(ctx, chipRect, 4, 'rgba(255,255,255,0.92)');
@@ -1653,9 +1817,8 @@ PZR.drawHeightProfile = function (ctx, r, scene) {
 
 // ---------- Изометрическая панель ----------
 const DefaultElevation = 24, AzimuthA = -58, AzimuthB = 122;
-const PalletHeightCm = 14.4, ChassisHeightCm = 10.0, DeckHeightCm = PalletHeightCm - ChassisHeightCm;
-const InnerPlankCount = 5, DeckPlankGapCm = 1.0;
-const EdgeBoardWidthNearCm = 11.0, EdgeBoardWidthFarCm = 7.0, BlockFillFraction = 0.55;
+const PalletHeightCm = 14.4, PalletBoardCm = 2.2;
+const CardboardCornerCm = 3;
 const DeckColor = { r: 0xEE, g: 0xD3, b: 0x8C };
 const ChassisColor = { r: 0xDC, g: 0xB0, b: 0x81 };
 const WoodEdge = { r: 0x8A, g: 0x64, b: 0x2E, a: 140 / 255 };
@@ -1663,14 +1826,55 @@ const LabelChipFontSize = 14, LabelChipH = LabelChipFontSize + 14, LabelRowGap =
 const LabelSideMinW = 118, LabelSideMaxW = 210;
 PZR.AzimuthA = AzimuthA; PZR.AzimuthB = AzimuthB;
 
+// Для стопок рядом порядок определяет общая грань, а не расстояние до центра.
+// Если две оси дают разные ответы, стопки на проекции не заслоняют друг друга.
+function orderPrisms(prisms, cam) {
+  const depth = (p) => cam.depthTowardCamera(p.x0 + p.lengthCm / 2, p.y0 + p.widthCm / 2, p.z0);
+  const ordered = prisms.slice().sort((a, b) => depth(a) - depth(b));
+  const ahead = ordered.map(() => []);
+  const incoming = ordered.map(() => 0);
+  const relation = (a, da, b, db, direction) => {
+    if (a + da <= b + PZE_EPS) return -direction;
+    if (b + db <= a + PZE_EPS) return direction;
+    return 0;
+  };
+  for (let i = 0; i < ordered.length; i++) for (let j = i + 1; j < ordered.length; j++) {
+    const a = ordered[i], b = ordered[j];
+    const sides = [
+      relation(a.x0, a.lengthCm, b.x0, b.lengthCm, cam.viewsFromPositiveX ? 1 : -1),
+      relation(a.y0, a.widthCm, b.y0, b.widthCm, cam.viewsFromPositiveY ? 1 : -1),
+      relation(a.z0, a.heightCm, b.z0, b.heightCm, 1),
+    ].filter(Boolean);
+    if (!sides.length || !sides.every((side) => side === sides[0])) continue;
+    const [back, front] = sides[0] < 0 ? [i, j] : [j, i];
+    ahead[back].push(front);
+    incoming[front]++;
+  }
+  const result = [];
+  while (result.length < ordered.length) {
+    let back = incoming.indexOf(0);
+    if (back < 0) back = incoming.findIndex((n) => n >= 0);
+    incoming[back] = -1;
+    result.push(ordered[back]);
+    for (const front of ahead[back]) if (incoming[front] > 0) incoming[front]--;
+  }
+  return result;
+}
+
+PZR.stackDrawOrder = (columns, cam) => orderPrisms(columns.map((column) => ({
+  ...column, z0: column.baseZ, heightCm: column.article.stackHeightCm, column,
+})), cam).map((item) => item.column);
+
 PZR.drawIsoPanel = function (ctx, r, scene, panelTitle, azimuthDeg, elevationDeg = DefaultElevation) {
-  const titleH = 26;
-  ctx.font = PZR.font('bold', 15); ctx.fillStyle = '#2A2C2F'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.fillText(panelTitle, r.left, r.top + 17);
+  const titleH = panelTitle ? 26 : 0;
+  if (panelTitle) {
+    ctx.font = PZR.font('bold', 15); ctx.fillStyle = '#2A2C2F'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(panelTitle, r.left, r.top + 17);
+  }
 
   const labelFont = PZR.font('bold', LabelChipFontSize);
-  const sideW = Math.min(LabelSideMaxW, Math.max(LabelSideMinW,
-    scene.columns.length === 0 ? LabelSideMinW : Math.max(...scene.columns.map(c => textWidth(ctx, labelFont, c.article.article))) + 28));
+  const sideW = scene.columns.length ? Math.min(LabelSideMaxW, Math.max(LabelSideMinW,
+    Math.max(...scene.columns.map(c => textWidth(ctx, labelFont, c.article.article))) + 28)) : 0;
 
   const leftBand = rect(r.left, r.top + titleH, r.left + sideW, r.bottom);
   const rightBand = rect(r.right - sideW, r.top + titleH, r.right, r.bottom);
@@ -1685,7 +1889,7 @@ PZR.drawIsoPanel = function (ctx, r, scene, panelTitle, azimuthDeg, elevationDeg
   const scale = Math.min(availW / rawW, availH / rawH);
 
   const originX = contentRect.midX - (bounds.minSx + bounds.maxSx) / 2 * scale;
-  const originY = contentRect.top + pad - bounds.minSy * scale;
+  const originY = contentRect.midY - (bounds.minSy + bounds.maxSy) / 2 * scale;
   const cam = PZ.OrthoCamera(azimuthDeg, elevationDeg, scale, originX, originY);
 
   drawGroundFloor(ctx, scene, cam);
@@ -1693,10 +1897,15 @@ PZR.drawIsoPanel = function (ctx, r, scene, panelTitle, azimuthDeg, elevationDeg
   drawCenterLineIso(ctx, scene, cam);
   drawShadows(ctx, scene, cam);
 
-  const drawOrder = [...scene.columns].sort((a, b) =>
-    cam.depthTowardCamera(a.x0 + a.lengthCm / 2, a.y0 + a.widthCm / 2, 0) -
-    cam.depthTowardCamera(b.x0 + b.lengthCm / 2, b.y0 + b.widthCm / 2, 0));
-  for (const col of drawOrder) drawColumn(ctx, col, cam);
+  const drawOrder = PZR.stackDrawOrder(scene.columns, cam);
+  if (scene.cardboard) {
+    const below = scene.cardboard.baseZ;
+    for (const col of drawOrder.filter((c) => c.lane <= 2 && c.baseZ + c.article.stackHeightCm <= below + PZE_EPS)) drawColumn(ctx, col, cam);
+    drawCardboard(ctx, cam, scene.cardboard);
+    for (const col of drawOrder.filter((c) => c.lane > 2 || c.baseZ + c.article.stackHeightCm > below + PZE_EPS)) drawColumn(ctx, col, cam);
+  } else {
+    for (const col of drawOrder) drawColumn(ctx, col, cam);
+  }
 
   drawIsoLabels(ctx, scene, cam, leftBand, rightBand, labelFont);
 };
@@ -1711,12 +1920,19 @@ function computeBounds(scene, cam) {
   for (const col of scene.columns) {
     for (const x of [col.x0, col.x0 + col.lengthCm])
       for (const y of [col.y0, col.y0 + col.widthCm])
-        for (const z of [0, PalletHeightCm + col.article.stackHeightCm])
+        for (const z of [0, col.baseZ + col.article.stackHeightCm])
           consider(x, y, z);
   }
+  if (scene.cardboard) {
+    const b = scene.cardboard;
+    for (const x of [b.x0, b.x0 + b.lengthCm]) for (const y of [b.y0, b.y0 + b.widthCm]) {
+      consider(x, y, b.baseZ + CardboardThicknessCm);
+    }
+  }
   const floorPad = Math.max(scene.palletLengthCm, scene.palletWidthCm) * 0.18;
-  consider(-floorPad, -floorPad, 0);
-  consider(scene.palletLengthCm + floorPad, scene.palletWidthCm + floorPad, 0);
+  for (const x of [-floorPad, scene.palletLengthCm + floorPad]) {
+    for (const y of [-floorPad, scene.palletWidthCm + floorPad]) consider(x, y, 0);
+  }
   return { minSx, minSy, maxSx, maxSy };
 }
 
@@ -1747,42 +1963,70 @@ function drawGroundFloor(ctx, scene, cam) {
 
 function drawPallet(ctx, scene, cam) {
   const L = scene.palletLengthCm, W = scene.palletWidthCm;
+  const full = 14.5 * W / 80, narrow = 10 * W / 80;
+  const gap = (W - (3 * full + 2 * narrow)) / 4;
+  const crossWidth = L * 14.5 / 120;
+  const xSupports = [0, (L - crossWidth) / 2, L - crossWidth];
+  const deckZ = PalletHeightCm - PalletBoardCm, crossZ = deckZ - PalletBoardCm;
+  const plank = (x0, y0, z0, lengthCm, widthCm, heightCm, color, shade = 1) =>
+    ({ x0, y0, z0, lengthCm, widthCm, heightCm, color, shade });
 
-  const block = (x0, y0, z0, dx, dy, dz, baseColor, shade = 1) =>
-    drawBox(ctx, cam, x0, y0, z0, dx, dy, dz,
-      PZ.faceTop(baseColor, shade), PZ.faceRight(baseColor, shade), PZ.faceLeft(baseColor, shade), WoodEdge, false);
+  let y = 0;
+  const deck = [full, narrow, full, narrow, full].map((width, index) => {
+    const board = plank(0, y, deckZ, L, width, PalletBoardCm, DeckColor, index % 2 ? 0.95 : 1);
+    y += width + gap;
+    return board;
+  });
+  const feet = [deck[0], deck[2], deck[4]];
+  const bottom = feet.map((b) => plank(0, b.y0, 0, L, b.widthCm, PalletBoardCm, ChassisColor));
+  const blocks = xSupports.flatMap((x) => feet.map((b) =>
+    plank(x, b.y0, PalletBoardCm, crossWidth, b.widthCm, crossZ - PalletBoardCm, ChassisColor, 0.94)));
+  const cross = xSupports.map((x) => plank(x, 0, crossZ, crossWidth, W, PalletBoardCm, DeckColor, 0.90));
+  for (const layer of [bottom, blocks, cross, deck]) {
+    for (const b of orderPrisms(layer, cam)) {
+      drawBox(ctx, cam, b.x0, b.y0, b.z0, b.lengthCm, b.widthCm, b.heightCm,
+        PZ.faceTop(b.color, b.shade), PZ.faceRight(b.color, b.shade), PZ.faceLeft(b.color, b.shade), WoodEdge, false);
+    }
+  }
+  ctx.fillStyle = 'rgba(109,75,42,0.50)';
+  for (const board of deck) for (const x of xSupports) {
+    for (const offset of [0.27, 0.73]) {
+      const point = cam.project(x + crossWidth / 2, board.y0 + board.widthCm * offset, PalletHeightCm);
+      ctx.beginPath(); ctx.arc(point[0], point[1], 0.85, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
 
-  const cellX = L / 3, cellY = W / 3;
-  const blockDx = cellX * BlockFillFraction, blockDy = cellY * BlockFillFraction;
-  const blocks = [];
-  for (let ix = 0; ix < 3; ix++)
-    for (let iy = 0; iy < 3; iy++)
-      blocks.push({ bx: ix * cellX + (cellX - blockDx) / 2, by: iy * cellY + (cellY - blockDy) / 2 });
-
-  blocks.sort((a, b) => cam.depthTowardCamera(a.bx + blockDx / 2, a.by + blockDy / 2, ChassisHeightCm / 2) -
-    cam.depthTowardCamera(b.bx + blockDx / 2, b.by + blockDy / 2, ChassisHeightCm / 2));
-  for (const { bx, by } of blocks) block(bx, by, 0, blockDx, blockDy, ChassisHeightCm, ChassisColor);
-
-  const edgeAt0 = cam.viewsFromPositiveY ? EdgeBoardWidthFarCm : EdgeBoardWidthNearCm;
-  const edgeAtW = cam.viewsFromPositiveY ? EdgeBoardWidthNearCm : EdgeBoardWidthFarCm;
-
-  const boards = [{ y0: 0, dy: edgeAt0, shade: 1 }];
-  const innerSpan = W - edgeAt0 - edgeAtW;
-  const plankPitch = innerSpan / InnerPlankCount;
-  for (let i = 0; i < InnerPlankCount; i++)
-    boards.push({ y0: edgeAt0 + i * plankPitch + DeckPlankGapCm / 2, dy: plankPitch - DeckPlankGapCm, shade: i % 2 === 0 ? 1.0 : 0.95 });
-  boards.push({ y0: W - edgeAtW, dy: edgeAtW, shade: 1 });
-
-  boards.sort((a, b) => cam.depthTowardCamera(L / 2, a.y0 + a.dy / 2, ChassisHeightCm + DeckHeightCm / 2) -
-    cam.depthTowardCamera(L / 2, b.y0 + b.dy / 2, ChassisHeightCm + DeckHeightCm / 2));
-  for (const { y0, dy, shade } of boards) block(0, y0, ChassisHeightCm, L, dy, DeckHeightCm, DeckColor, shade);
+function drawCardboard(ctx, cam, { x0, y0, lengthCm, widthCm, baseZ }) {
+  const r = CardboardCornerCm, x1 = x0 + lengthCm, y1 = y0 + widthCm;
+  const corners = [[x1 - r, y0 + r], [x1 - r, y1 - r], [x0 + r, y1 - r], [x0 + r, y0 + r]];
+  const perimeter = corners.flatMap(([cx, cy], corner) => Array.from({ length: 7 }, (_, step) => {
+    const angle = (corner - 1 + step / 6) * Math.PI / 2;
+    return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r];
+  }));
+  const upper = perimeter.map(([x, y]) => cam.project(x, y, baseZ + CardboardThicknessCm));
+  const lower = perimeter.map(([x, y]) => cam.project(x, y, baseZ));
+  const kraft = { r: 201, g: 151, b: 84 };
+  for (let i = 0; i < perimeter.length; i++) {
+    const j = (i + 1) % perimeter.length;
+    const nx = perimeter[j][1] - perimeter[i][1], ny = perimeter[i][0] - perimeter[j][0];
+    if (cam.depthTowardCamera(nx, ny, 0) <= 0) continue;
+    const shade = 0.72 + 0.11 * Math.abs(nx) / Math.hypot(nx, ny);
+    strokePolyPath(ctx, [upper[i], upper[j], lower[j], lower[i]]);
+    ctx.fillStyle = PZ.css(PZ.lightenHsl(kraft, shade)); ctx.fill();
+    ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 0.6; ctx.stroke();
+  }
+  drawFace(ctx, PZ.css(WoodEdge), PZ.css(kraft), upper);
 }
 
 function drawShadows(ctx, scene, cam) {
   ctx.save();
+  const L = scene.palletLengthCm, W = scene.palletWidthCm;
+  strokePolyPath(ctx, [[0, 0], [L, 0], [L, W], [0, W]].map(([x, y]) => cam.project(x, y, PalletHeightCm)));
+  ctx.clip();
   ctx.filter = 'blur(2.5px)';
   ctx.fillStyle = 'rgba(0,0,0,0.216)';
-  for (const col of scene.columns) {
+  for (const col of scene.columns.filter((c) => c.lane <= 2)) {
     const a = cam.project(col.x0, col.y0, PalletHeightCm);
     const b = cam.project(col.x0 + col.lengthCm, col.y0, PalletHeightCm);
     const c = cam.project(col.x0 + col.lengthCm, col.y0 + col.widthCm, PalletHeightCm);
@@ -1803,7 +2047,7 @@ function drawCenterLineIso(ctx, scene, cam) {
 
 function drawColumn(ctx, col, cam) {
   const baseColor = col.color;
-  const edge = PZ.edgeColor(baseColor);
+  const edge = col.offCardboard ? { r: 211, g: 47, b: 47 } : PZ.edgeColor(baseColor);
   const inset = Math.min(VisualGapCm / 2, col.lengthCm * 0.15);
   const x0 = col.x0 + inset;
   const dx = col.lengthCm - inset * 2;
@@ -1813,7 +2057,7 @@ function drawColumn(ctx, col, cam) {
     const top = PZ.faceTop(baseColor, shade);
     const faceX = PZ.faceRight(baseColor, shade);
     const faceY = PZ.faceLeft(baseColor, shade);
-    const z0 = PalletHeightCm + i * col.article.heightCm;
+    const z0 = col.baseZ + i * col.article.heightCm;
     const z1 = z0 + col.article.heightCm;
     drawBox(ctx, cam, x0, col.y0, z0, dx, col.widthCm, z1 - z0, top, faceX, faceY, edge, true);
   }
@@ -1852,7 +2096,7 @@ function drawIsoLabels(ctx, scene, cam, leftBand, rightBand, font) {
   const midX = (leftBand.right + rightBand.left) / 2;
   const items = scene.columns.map(col => {
     const cx = col.x0 + col.lengthCm / 2, cy = col.y0 + col.widthCm / 2;
-    const [ax, ay] = cam.project(cx, cy, PalletHeightCm + col.article.stackHeightCm);
+    const [ax, ay] = cam.project(cx, cy, col.baseZ + col.article.stackHeightCm);
     return { anchor: [ax, ay], text: col.article.article };
   });
   const left = items.filter(i => i.anchor[0] < midX).sort((a, b) => a.anchor[1] - b.anchor[1]);
@@ -1894,9 +2138,13 @@ const CanvasWidth = 2000, HeaderH = 128, Gutter = 22, Margin = 26, GridH = 980, 
 
 PZR.composePallet = function (pallet, scene, shipment) {
   shipment = shipment || {};
-  const compositionRows = Math.ceil(scene.columns.length / CompositionCols);
+  const empty = scene.columns.length === 0;
+  const compositionRows = Math.ceil(scene.columns.filter((c) => !c.depth).length / CompositionCols);
   const footerH = 56 + compositionRows * CompositionRowH;
-  const canvasHeight = HeaderH + GridH + Gutter + footerH + Margin;
+  const extraH = scene.cardboard ? (GridH + Gutter) / 2 : 0;
+  const headerHeight = empty ? 64 : HeaderH + (scene.cardboard ? 18 : 0);
+  const cellH = empty ? 380 : (GridH - Gutter) / 2;
+  const canvasHeight = headerHeight + (empty ? cellH : GridH + extraH + Gutter + footerH) + Margin;
 
   const canvas = document.createElement('canvas');
   canvas.width = CanvasWidth; canvas.height = canvasHeight;
@@ -1905,19 +2153,26 @@ PZR.composePallet = function (pallet, scene, shipment) {
   ctx.fillStyle = '#F4F5F7'; ctx.fillRect(0, 0, CanvasWidth, canvasHeight);
   drawHeader(ctx, pallet, scene, shipment);
 
-  const gridTop = HeaderH;
+  const gridTop = headerHeight;
   const cellW = (CanvasWidth - Margin * 2 - Gutter) / 2;
-  const cellH = (GridH - Gutter) / 2;
 
   const topLeft = rect(Margin, gridTop, Margin + cellW, gridTop + cellH);
   const topRight = rect(Margin + cellW + Gutter, gridTop, CanvasWidth - Margin, gridTop + cellH);
+  const inset = (rr) => rect(rr.left + 16, rr.top + 14, rr.right - 16, rr.bottom - 16);
+  if (empty) {
+    const panel = rect(Margin, gridTop, CanvasWidth - Margin, gridTop + cellH);
+    drawCard(ctx, panel);
+    PZR.drawIsoPanel(ctx, inset(panel), scene, '', AzimuthA);
+    return canvas;
+  }
   const bottomLeft = rect(Margin, gridTop + cellH + Gutter, Margin + cellW, gridTop + GridH);
   const bottomRight = rect(Margin + cellW + Gutter, gridTop + cellH + Gutter, CanvasWidth - Margin, gridTop + GridH);
-  const footer = rect(Margin, gridTop + GridH + Gutter, CanvasWidth - Margin, canvasHeight - Margin);
+  const layerTop = gridTop + GridH + Gutter;
+  const layerCard = scene.cardboard && rect(Margin, layerTop, CanvasWidth - Margin, layerTop + cellH);
+  const footer = rect(Margin, layerTop + extraH, CanvasWidth - Margin, canvasHeight - Margin);
 
-  [topLeft, topRight, bottomLeft, bottomRight, footer].forEach(rr => drawCard(ctx, rr));
+  [topLeft, topRight, bottomLeft, bottomRight, layerCard, footer].filter(Boolean).forEach(rr => drawCard(ctx, rr));
 
-  const inset = (rr) => rect(rr.left + 16, rr.top + 14, rr.right - 16, rr.bottom - 16);
   const clipped = (rr, draw) => {
     ctx.save();
     ctx.beginPath(); ctx.rect(rr.left, rr.top, rr.width, rr.height); ctx.clip();
@@ -1929,6 +2184,7 @@ PZR.composePallet = function (pallet, scene, shipment) {
   clipped(topRight, () => PZR.drawIsoPanel(ctx, inset(topRight), scene, 'Ракурс 1', AzimuthA));
   clipped(bottomLeft, () => PZR.drawHeightProfile(ctx, inset(bottomLeft), scene));
   clipped(bottomRight, () => PZR.drawIsoPanel(ctx, inset(bottomRight), scene, 'Ракурс 2', AzimuthB));
+  if (layerCard) clipped(layerCard, () => PZR.drawTopView(ctx, inset(layerCard), scene, 2));
   clipped(footer, () => drawComposition(ctx, inset(footer), scene));
 
   return canvas;
@@ -1948,11 +2204,9 @@ function drawCard(ctx, r) {
 function drawHeader(ctx, pallet, scene, shipment) {
   ctx.font = PZR.font('bold', 32); ctx.fillStyle = '#1C1D1F'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillText(`Паллета ${pallet.index + 1}`, Margin, 44);
+  if (!scene.columns.length) return;
 
-  const maxH = scene.columns.length > 0 ? Math.max(...scene.columns.map(c => c.article.stackHeightCm)) : 0;
-  const totalH = scene.columns.length > 0 ? maxH + PalletHeightCm : 0;
-  const laneLengths = {};
-  for (const c of scene.columns) laneLengths[c.lane] = (laneLengths[c.lane] || 0) + c.lengthCm;
+  const totalH = scene.totalHeightCm;
   const boxes = scene.columns.reduce((s, c) => s + c.article.qty, 0);
   const weight = scene.columns.reduce((s, c) => s + c.article.stackWeightKg, 0);
 
@@ -1961,11 +2215,11 @@ function drawHeader(ctx, pallet, scene, shipment) {
     { t: `Столбиков: ${scene.columns.length}   ·   коробов: ${boxes}   ·   вес груза: ${Math.round(weight * 10) / 10} кг   ·   `, c: OK },
     { t: `высота с поддоном: ${Math.round(totalH)} см`, c: totalH > scene.maxHeightCm + 1e-6 ? BAD : OK },
   ];
-  for (const k of Object.keys(laneLengths).sort((a, b) => a - b)) {
-    const len = laneLengths[k];
+  scene.laneLengths.forEach((len, li) => {
+    if (!len) return;
     parts.push({ t: '   ·   ', c: OK });
-    parts.push({ t: `шеренга ${k}: ${Math.round(len)} см`, c: len > scene.palletLengthCm + (scene.overhangCm || 0) + 1e-6 ? BAD : OK });
-  }
+    parts.push({ t: `Ш${li + 1}: ${Math.round(len)} см`, c: len > scene.palletLengthCm + scene.overhangCm + PZE_EPS ? BAD : OK });
+  });
   ctx.font = PZR.font('bold', 17);
   let x = Margin;
   for (const part of parts) {
@@ -1973,8 +2227,15 @@ function drawHeader(ctx, pallet, scene, shipment) {
     ctx.fillText(part.t, x, 72);
     x += ctx.measureText(part.t).width;
   }
+  if (scene.cardboard) {
+    const bad = scene.cardboard.intersects || !scene.cardboard.supports.length || scene.columns.some((c) => c.offCardboard);
+    const needsSupport = scene.columns.some((c) => c.unsupported);
+    ctx.fillStyle = bad ? BAD : OK;
+    ctx.fillText(`Прокладка 120×80×3 см · ${Math.round(scene.cardboard.height * 10) / 10} см от поддона` +
+      (bad || needsSupport ? '   ·   Проверьте опору при сборке' : ''), Margin, 96);
+  }
 
-  const fieldsY = 106;
+  const fieldsY = scene.cardboard ? 124 : 106;
   drawField(ctx, Margin, fieldsY, 300, 'Заказ №', shipment.orderNumber);
   drawField(ctx, Margin + 330, fieldsY, 300, 'Дата отгрузки', shipment.shipmentDate);
   drawField(ctx, Margin + 660, fieldsY, 260, 'Собрал', null);
@@ -2018,6 +2279,9 @@ PZR.composeSummary = function (data, shipment) {
       { t: String(Math.round(p.weightKg * 10) / 10) }, { t: String(Math.round(p.heightCm)), bad: p.tooHigh },
       { t: p.lanes.map((l, i) => `${i + 1}: ${Math.round(l.len)}${l.over ? ' (свес)' : ''}`).join('   '), bad: p.lanes.some((l) => l.over) },
     ]));
+  for (const p of data.pallets.filter((p) => p.supportProblem)) {
+    lines.push({ kind: 'text', text: `Паллета № ${p.index + 1}: проверьте опору слоя на прокладке.` });
+  }
   lines.push({ kind: 'gap' });
   addTable('Сверка по артикулам', ['Артикул', 'Коробов всего', 'Разложено', 'В пуле'], articleCols,
     data.articles.map((a) => [
@@ -2079,11 +2343,11 @@ function drawComposition(ctx, r, scene) {
   ctx.fillText('Состав заказа', r.left, r.top + 14);
 
   const colW = r.width / CompositionCols;
-  const rows = Math.ceil(scene.columns.length / CompositionCols);
+  const ordered = scene.columns.filter((c) => !c.depth).sort((a, b) => a.lane - b.lane || a.x0 - b.x0);
+  const rows = Math.ceil(ordered.length / CompositionCols);
   const startY = r.top + 34;
 
   const headFont = PZR.font('bold', 12), rowFont = PZR.font('bold', 14);
-  const ordered = [...scene.columns].sort((a, b) => a.lane - b.lane || a.x0 - b.x0);
 
   for (let col = 0; col < CompositionCols; col++) {
     const colX = r.left + col * colW;
@@ -2110,10 +2374,10 @@ function drawComposition(ctx, r, scene) {
       strokeRoundRect(ctx, swatch, 3, 'rgba(0,0,0,0.235)', 1);
 
       ctx.font = rowFont; ctx.fillStyle = '#202022';
-      ctx.fillText(c.article.article, articleX, y);
+      ctx.fillText(scene.cardboard ? `${c.row.article} · Ш${c.lane}` : c.row.article, articleX, y);
       ctx.fillText(`${Math.round(c.lengthCm)}×${Math.round(c.widthCm)}×${Math.round(c.article.heightCm)}`, dimsX, y);
-      ctx.fillText(`${c.article.qty} шт`, qtyX, y);
-      ctx.fillText(`${Math.round(c.article.stackHeightCm)}`, heightX, y);
+      ctx.fillText(c.row.secondQty ? `${c.row.qty - c.row.secondQty}+${c.row.secondQty} шт` : `${c.row.qty} шт`, qtyX, y);
+      ctx.fillText(`${Math.round(c.row.stackHeightCm)}`, heightX, y);
     }
   }
 }
@@ -2374,30 +2638,19 @@ PZE.glueRows = function (doc, id) {
 // config: {pallet:{lengthMm,widthMm}, maxHeightCm}.
 PZE.checkPallet = function (doc, pi, config) {
   const p = doc.pallets[pi];
-  const L = config.pallet.lengthMm / 10, W = config.pallet.widthMm / 10;
-  const limit = config.maxHeightCm || 200;
-  const allowed = Math.max(0, config.overhangCm || 0);
-  // overhangLanes — шеренги со свесом БОЛЬШЕ допустимого (проблема); свес в пределах допуска — норма.
-  const out = { laneLengths: [], overhangLanes: [], wideRows: [], maxHeightCm: 0, tooHigh: false, weightKg: 0, boxes: 0, columns: 0, limitCm: limit, palletLengthCm: L, allowedOverhangCm: allowed };
-  let maxStack = 0;
-  p.lanes.forEach((ids, li) => {
-    let len = 0;
-    for (const id of ids) {
-      const r = doc.rows[id];
-      if (!r) continue;
-      len += r.lengthCm;
-      out.columns++;
-      out.boxes += r.qty;
-      out.weightKg += r.stackWeightKg;
-      maxStack = Math.max(maxStack, r.stackHeightCm);
-      if (r.widthCm > W / 2 + PZE_EPS) out.wideRows.push(id);
-    }
-    out.laneLengths.push(len);
-    if (len > L + allowed + PZE_EPS) out.overhangLanes.push(li);
-  });
-  out.maxHeightCm = out.columns > 0 ? maxStack + PalletHeightCm : 0;
-  out.tooHigh = out.maxHeightCm > limit + PZE_EPS;
-  return out;
+  const scene = PZ.buildScene(PZE.palletForRender(doc, p), config, '', { manualOrder: !p.autoSort });
+  const maxHeightCm = scene.totalHeightCm;
+  return {
+    scene, maxHeightCm, tooHigh: maxHeightCm > scene.maxHeightCm + PZE_EPS,
+    laneLengths: scene.laneLengths,
+    overhangLanes: scene.laneLengths.flatMap((len, li) => len > scene.palletLengthCm + scene.overhangCm + PZE_EPS ? [li] : []),
+    wideRows: [...new Set(scene.columns.filter((c) => c.row.occupiedWidthCm > scene.palletWidthCm / 2 + PZE_EPS).map((c) => c.row.id))],
+    unsupported: [...new Set(scene.columns.filter((c) => c.unsupported).map((c) => c.row.id))],
+    offCardboard: [...new Set(scene.columns.filter((c) => c.offCardboard).map((c) => c.row.id))],
+    boxes: scene.columns.reduce((n, c) => n + c.article.qty, 0),
+    weightKg: scene.columns.reduce((n, c) => n + c.article.stackWeightKg, 0),
+    columns: scene.columns.length, limitCm: scene.maxHeightCm, palletLengthCm: scene.palletLengthCm, allowedOverhangCm: scene.overhangCm,
+  };
 };
 
 // Снимок проблем всех паллет (ключ — сам объект паллеты, переживает смену индексов).
@@ -2426,7 +2679,8 @@ PZE.newProblems = function (doc, config, before) {
     for (const id of c.wideRows) {
       if (!b.wide.has(id)) {
         const r = doc.rows[id];
-        msgs.push(`Короб «${r.article}» на паллете ${pi + 1} шире половины паллеты (${r1(r.widthCm)} см).`);
+        const what = r.secondQty ? 'Два ряда' : 'Короб';
+        msgs.push(`${what} «${r.article}» на паллете ${pi + 1} выходят за ширину шеренги (${r1(r.occupiedWidthCm)} см).`);
       }
     }
     if (c.tooHigh && c.maxHeightCm > b.height + PZE_EPS) {
@@ -2490,21 +2744,22 @@ PZE.autoLayout = function (doc, config, thresholdCm) {
   //  2) от длинных к коротким, в самую заполненную шеренгу, где ещё влезает (плотная укладка).
   const laneLen = (ids) => ids.reduce((s, id) => s + (doc.rows[id] ? doc.rows[id].lengthCm : 0), 0);
   const base = doc.pallets.map((p) => ({
-    lens: p.lanes.map(laneLen),
-    maxStack: Math.max(0, ...p.lanes.flat().map((id) => (doc.rows[id] ? doc.rows[id].stackHeightCm : 0))),
+    lens: p.lanes.slice(0, 2).map(laneLen), layered: p.lanes.length > 2,
+    maxStack: Math.max(0, ...p.lanes.slice(0, 2).flat().map((id) => (doc.rows[id] ? doc.rows[id].stackHeightCm : 0))),
   }));
   const fits = [], bad = [];
   for (const row of items) {
-    if (row.widthCm > W / 2 + PZE_EPS || row.lengthCm > L + PZE_EPS || row.stackHeightCm > stackLimit + PZE_EPS) bad.push(row);
+    if (row.occupiedWidthCm > W / 2 + PZE_EPS || row.lengthCm > L + PZE_EPS || row.stackHeightCm > stackLimit + PZE_EPS) bad.push(row);
     else fits.push(row);
   }
   const plan = (rows, bestFit) => {
-    const pals = base.map((b) => ({ lens: b.lens.slice(), maxStack: b.maxStack }));
+    const pals = base.map((b) => ({ ...b, lens: b.lens.slice() }));
     const moves = [];
     for (const row of rows) {
       let pick = null, bestRem = Infinity;
       for (let pi = 0; pi < pals.length && !(pick && !bestFit); pi++) {
         const st = pals[pi];
+        if (st.layered) continue;
         if (Math.max(st.maxStack, row.stackHeightCm) > stackLimit + PZE_EPS) continue;
         const order = st.lens[0] <= st.lens[1] ? [0, 1] : [1, 0];
         for (const li of order) {
@@ -2539,6 +2794,11 @@ PZE.autoLayout = function (doc, config, thresholdCm) {
 // Пустые шеренги допустимы (buildScene просто не даёт для них колонок), поэтому лэйны
 // НЕ фильтруются — иначе индекс шеренги (чёт/нечет = прижим сверху/снизу) съедет.
 // opts.skipEmpty — пустые паллеты не попадают (нумерация идёт заново); srcIndex — индекс в doc.
+PZE.palletForRender = (doc, p) => ({
+  cardboardHeightCm: p.cardboardHeightCm,
+  groups: p.lanes.map((ids) => ({ articles: ids.map((id) => doc.rows[id]).filter(Boolean) })),
+});
+
 PZE.buildPalletsForRender = function (doc, opts) {
   const skipEmpty = !!(opts && opts.skipEmpty);
   const out = [];
@@ -2546,7 +2806,7 @@ PZE.buildPalletsForRender = function (doc, opts) {
     if (skipEmpty && !p.lanes.some((l) => l.length)) return;
     out.push({
       index: out.length, srcIndex,
-      groups: p.lanes.map((laneIds) => ({ articles: laneIds.map((id) => doc.rows[id]).filter(Boolean) })),
+      ...PZE.palletForRender(doc, p),
     });
   });
   return out;
@@ -2561,6 +2821,8 @@ PZE.summaryData = function (doc, config, missing) {
     pallets.push({
       index: pallets.length, columns: c.columns, boxes: c.boxes, weightKg: c.weightKg,
       heightCm: c.maxHeightCm, tooHigh: c.tooHigh,
+      supportProblem: c.scene.cardboard && (c.scene.cardboard.intersects || !c.scene.cardboard.supports.length ||
+        c.unsupported.length > 0 || c.offCardboard.length > 0),
       lanes: c.laneLengths.map((len, li) => ({ len, over: c.overhangLanes.includes(li) })),
     });
   });
@@ -2583,6 +2845,7 @@ PZE.serializeDoc = function (doc) {
     rows[id] = {
       id: r.id, article: r.article, qty: r.qty, lengthCm: r.lengthCm, widthCm: r.widthCm, heightCm: r.heightCm,
       weightPerBoxKg: r.weightPerBoxKg, baseL: r.baseL, baseW: r.baseW, baseH: r.baseH, perm: r.perm,
+      secondRowQty: r.secondRowQty,
     };
   }
   return JSON.stringify({ rows, pool: doc.pool, pallets: doc.pallets });
@@ -2634,6 +2897,8 @@ PZE.deserializeDoc = function (json) {
   // любое изменение подвисало на пару секунд. Теперь пересчитывается только та паллета,
   // чья подпись (состав шеренг + актуальные габариты её строк) реально изменилась.
   let previewCache = {};
+  let positionDoc = null;
+  const pendingPositions = new Map();
 
   // ---------- Отмена действий ----------
   // Простой стек снимков всего документа: перед КАЖДЫМ мутирующим действием (перенос,
@@ -2669,11 +2934,11 @@ PZE.deserializeDoc = function (json) {
     const p = doc.pallets[pi];
     const rowsPart = p.lanes.flat().map((id) => {
       const r = doc.rows[id];
-      return r ? [id, r.qty, r.lengthCm, r.widthCm, r.heightCm, r.weightPerBoxKg].join(':') : id;
+      return r ? [id, r.qty, r.lengthCm, r.widthCm, r.heightCm, r.weightPerBoxKg, r.secondRowQty].join(':') : id;
     }).join('|');
     return JSON.stringify({
-      lanes: p.lanes, rowsPart, autoSort: p.autoSort,
-      len: state.config.pallet.lengthMm, wid: state.config.pallet.widthMm, maxH: state.config.maxHeightCm,
+      lanes: p.lanes, rowsPart, autoSort: p.autoSort, cardboard: p.cardboardHeightCm,
+      len: state.config.pallet.lengthMm, wid: state.config.pallet.widthMm, maxH: state.config.maxHeightCm, overhang: state.config.overhangCm,
       order: state.shipment.orderNumber, date: state.shipment.shipmentDate,
     });
   }
@@ -2761,6 +3026,7 @@ PZE.deserializeDoc = function (json) {
     b.className = cls;
     b.innerHTML = ICONS[iconName];
     b.title = title;
+    b.setAttribute('aria-label', title);
     return b;
   }
 
@@ -2774,10 +3040,11 @@ PZE.deserializeDoc = function (json) {
       const c = el('span', null, compact ? short : full);
       if (title || compact) c.title = title || full;
       row.appendChild(c);
+      return c;
     };
     row.appendChild(el('span'));
     cell('Артикул', 'Артикул');
-    cell('Высота', 'Выс.', 'Высота столбика, см');
+    cell('Высота, см', 'Выс., см', 'Высота столбика, см').className = 'chipHeightHeader';
     cell('Кол-во', 'Шт', 'Количество коробов');
     cell('Д×Ш×В, см', 'Д×Ш×В, см');
     cell('Паллета/Шеренга', 'П / Ш', 'Номер паллеты / номер шеренги');
@@ -2984,17 +3251,20 @@ PZE.deserializeDoc = function (json) {
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Раскладка');
-    const headers = ['Артикул', 'Кол-во, шт', 'Длина, см', 'Ширина, см', 'Высота, см', 'Высота столбика, см', 'Паллета', 'Шеренга'];
+    const headers = ['Артикул', 'Кол-во, шт', 'Длина, см', 'Ширина, см', 'Высота, см', 'Высота столбика, см', 'Паллета', 'Шеренга',
+      'Слой', 'Уровень прокладки, см', 'Коробов во втором ряду', 'Вес короба, кг'];
     ws.addRow(headers);
 
     scenes.forEach((scene, sceneIdx) => {
       const byLane = {};
-      scene.columns.forEach((c) => { (byLane[c.lane] || (byLane[c.lane] = [])).push(c); });
+      scene.columns.filter((c) => !c.depth).forEach((c) => { (byLane[c.lane] || (byLane[c.lane] = [])).push(c); });
       Object.keys(byLane).map(Number).sort((a, b) => a - b).forEach((laneNum) => {
         byLane[laneNum].sort((a, b) => a.x0 - b.x0).forEach((c) => {
           ws.addRow([
-            c.article.article, c.article.qty, c.lengthCm, c.widthCm, c.article.heightCm,
-            Math.round(c.article.stackHeightCm), sceneIdx + 1, laneNum,
+            c.row.article, c.row.qty, c.lengthCm, c.widthCm, c.row.heightCm,
+            Math.round(c.row.stackHeightCm), sceneIdx + 1, (laneNum - 1) % 2 + 1,
+            laneNum > 2 ? 2 : 1, scene.cardboard ? scene.cardboard.selectedHeight ?? 'Авто' : null,
+            c.row.secondRowQty === 0 ? 0 : c.row.secondQty || null, c.row.weightPerBoxKg,
           ]);
         });
         ws.addRow([]);
@@ -3010,6 +3280,8 @@ PZE.deserializeDoc = function (json) {
     });
     ws.columns.forEach((col) => { col.width = 15; });
     ws.getColumn(1).width = 20;
+    ws.getColumn(10).width = 24;
+    ws.getColumn(11).width = 26;
 
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -3100,9 +3372,9 @@ PZE.deserializeDoc = function (json) {
     const rowColor = (colorMap && colorMap.get(row.article)) || PZ.colorForArticle(row.article);
     chip.style.borderLeft = `5px solid ${PZ.css(rowColor)}`;
     chip.style.background = `rgba(${rowColor.r}, ${rowColor.g}, ${rowColor.b}, 0.14)`;
-    if (row.widthCm > state.config.pallet.widthMm / 20 + 1e-6) {
+    if (row.occupiedWidthCm > state.config.pallet.widthMm / 20 + PZE_EPS) {
       chip.classList.add('chipWide');
-      chip.title = 'Короб шире половины ширины паллеты';
+      chip.title = 'Короба выходят за ширину шеренги';
     }
 
     // Тянуть можно только за эту ручку, не за всю строку целиком: строка плотно набита
@@ -3118,9 +3390,29 @@ PZE.deserializeDoc = function (json) {
     chip.appendChild(handle);
 
     chip.appendChild(el('span', 'chipArticle', row.article));
-    // Высота столбика — главный ориентир при ручной раскладке, поэтому не мелкая серая
-    // подпись, а заметный цветной значок.
-    chip.appendChild(el('span', 'chipHeight', `H:${Math.round(row.stackHeightCm)}`));
+    const canUseTwoRows = row.qty > 1 && row.widthCm * 2 <= state.config.pallet.widthMm / 20 + PZE_EPS;
+    const canEditRows = canUseTwoRows || row.secondRowQty != null;
+    const height = el(canEditRows ? 'button' : 'span', 'chipHeight');
+    const heightValue = el('span', 'chipHeightValue');
+    heightValue.appendChild(el('span', null, Math.round(row.stackHeightCm)));
+    height.appendChild(heightValue);
+    if (canEditRows) {
+      height.type = 'button';
+      height.title = row.secondQty ? `Два ряда: ${row.qty - row.secondQty} + ${row.secondQty} коробов. Изменить` : 'Поставить коробки артикула в два ряда';
+      height.setAttribute('aria-label', height.title);
+      height.appendChild(el('small', null, row.secondQty ? `${row.qty - row.secondQty}+${row.secondQty}` : '2 ряда'));
+      height.addEventListener('click', async () => {
+        if (!canUseTwoRows || !row.secondQty) {
+          applyAction(() => { row.secondRowQty = canUseTwoRows ? 0 : undefined; });
+          return;
+        }
+        const n = await openEditorDialog('Два ряда', `${row.article} · ${row.qty} коробов. 0 вернёт одну стопку.`, {
+          label: 'Коробов во втором ряду', min: 0, max: row.qty - 1, value: row.secondQty,
+        });
+        if (n !== null) applyAction(() => { row.secondRowQty = n || undefined; });
+      });
+    }
+    chip.appendChild(height);
 
     const mkNum = (cls, val, step, min) => {
       const i = document.createElement('input');
@@ -3158,11 +3450,11 @@ PZE.deserializeDoc = function (json) {
     dimsField.appendChild(hInput); dimsField.appendChild(el('span', 'unit', ' см'));
     chip.appendChild(dimsField);
 
-    qtyInput.addEventListener('change', () => {
+    qtyInput.addEventListener('change', async () => {
       const requested = Math.max(1, Math.round(parseFloat(qtyInput.value) || row.qty));
-      const mode = $('#qtyOverflowMode').value;
+      const mode = qtyOverflowMode;
       let applied = requested;
-      if (!applyAction(() => { applied = PZE.adjustQty(doc, id, requested, mode); })) return;
+      if (!await applyAction(() => { applied = PZE.adjustQty(doc, id, requested, mode); })) return;
       if (applied !== requested) {
         showError(`Недостаточно свободных коробов «${row.article}»: увеличено только до ${applied} шт (столько же в других строках этого артикула, забрать больше неоткуда). Общее число коробов по артикулу не может превышать заказанное.`);
       } else showError('');
@@ -3195,8 +3487,8 @@ PZE.deserializeDoc = function (json) {
     posPallet.title = 'Номер паллеты (0 — не распределено; N+1 — новая паллета). Впишите и нажмите Enter';
     const posLane = mkNum('posLane', loc && loc.where === 'lane' ? loc.li + 1 : '', 1, 1);
     posLane.placeholder = 'Ш';
-    posLane.max = 2;
-    posLane.title = 'Номер шеренги (1 или 2). Впишите и нажмите Enter';
+    posLane.max = doc.pallets.some((p) => p.lanes.length > 2) ? 4 : 2;
+    posLane.title = 'Нижний слой: 1 или 2. Слой на прокладке: 3 или 4. Впишите и нажмите Enter';
     posField.appendChild(posPallet);
     posField.appendChild(document.createTextNode('/'));
     posField.appendChild(posLane);
@@ -3205,11 +3497,24 @@ PZE.deserializeDoc = function (json) {
     posLane.dataset.orig = posLane.value;
     chip._pos = { id, posPallet, posLane };
 
+    const pending = pendingPositions.get(id);
+    if (pending) [posPallet.value, posLane.value] = pending;
+    const markPending = () => {
+      const edited = [posPallet, posLane].map((input) => {
+        const changed = input.value !== input.dataset.orig;
+        input.toggleAttribute('data-pending', changed);
+        return changed;
+      });
+      if (edited.some(Boolean)) pendingPositions.set(id, [posPallet.value, posLane.value]);
+      else pendingPositions.delete(id);
+    };
+    markPending();
     [posPallet, posLane].forEach((input) => {
+      input.addEventListener('input', markPending);
       input.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        applyPositionsFromInputs(id);
+        applyPositionsFromInputs();
       });
     });
 
@@ -3246,12 +3551,11 @@ PZE.deserializeDoc = function (json) {
       ? 'Разделить: отделить часть количества в новую строку'
       : 'Разделить нельзя: в строке всего 1 шт');
     splitBtn.disabled = !canSplit;
-    splitBtn.addEventListener('click', () => {
-      const ans = prompt(`Сколько из ${row.qty} шт отделить в новую строку?`, Math.floor(row.qty / 2));
-      if (ans === null) return;
-      const n = parseInt(ans, 10);
-      if (n && n > 0 && n < row.qty) applyAction(() => PZE.splitRow(doc, id, n));
-      else if (ans.trim() !== '') alert('Число должно быть больше 0 и меньше текущего количества.');
+    splitBtn.addEventListener('click', async () => {
+      const n = await openEditorDialog('Разделить строку', `${row.article} · ${row.qty} коробов`, {
+        label: 'Коробов в новой строке', min: 1, max: row.qty - 1, value: Math.floor(row.qty / 2),
+      });
+      if (n !== null) applyAction(() => PZE.splitRow(doc, id, n));
     });
     actions.appendChild(splitBtn);
 
@@ -3312,6 +3616,86 @@ PZE.deserializeDoc = function (json) {
   }
   function round1(v) { return Math.round(v * 10) / 10; }
 
+  function createChoiceMenu(label, options, selected, onSelect, layer = false) {
+    const details = el('details', layer ? 'choiceMenu layerLevel' : 'choiceMenu');
+    const summary = el('summary', layer ? 'smallBtn' : 'ghostBtn');
+    const menu = el('div', layer ? 'choiceOptions layerLevelMenu' : 'choiceOptions');
+    menu.setAttribute('popover', 'auto');
+    const update = (value) => {
+      for (const [index, button] of [...menu.children].entries()) {
+        if (options[index].value === value) button.setAttribute('aria-current', 'true');
+        else button.removeAttribute('aria-current');
+      }
+      summary.textContent = label + options.find((option) => option.value === value).label;
+    };
+    for (const { value, label: text } of options) {
+      const button = el('button', null, text);
+      button.type = 'button';
+      button.addEventListener('click', () => {
+        details.open = false;
+        summary.focus();
+        update(value);
+        onSelect(value);
+      });
+      menu.appendChild(button);
+    }
+    update(selected);
+    details.append(summary, menu);
+    details.addEventListener('toggle', () => {
+      if (!details.open) { if (menu.matches(':popover-open')) menu.hidePopover(); return; }
+      const anchor = summary.getBoundingClientRect();
+      menu.style.minWidth = anchor.width + 'px';
+      menu.showPopover();
+      const { width, height } = menu.getBoundingClientRect();
+      menu.style.left = Math.max(4, Math.min(anchor.left, innerWidth - width - 4)) + 'px';
+      menu.style.top = (anchor.bottom + height + 8 <= innerHeight ? anchor.bottom + 4 : Math.max(4, anchor.top - height - 4)) + 'px';
+    });
+    menu.addEventListener('toggle', (e) => {
+      if (e.newState === 'closed' && !menu.matches(':popover-open')) details.open = false;
+    });
+    details.addEventListener('focusout', (e) => { if (!details.contains(e.relatedTarget)) details.open = false; });
+    return details;
+  }
+
+  let qtyOverflowMode = 'pool';
+  const overflowMenu = createChoiceMenu('Излишек → ', [
+    { value: 'pool', label: 'в остаток' }, { value: 'lane', label: 'в другую шеренгу' },
+  ], qtyOverflowMode, (value) => { qtyOverflowMode = value; });
+  $('#qtyOverflowMode').appendChild(overflowMenu);
+
+  $('#editorDialog [value="cancel"]').addEventListener('click', () => $('#editorDialog').close('cancel'));
+  $('#editorDialogValue').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    $('#editorDialogForm').requestSubmit($('#editorDialogApply'));
+  });
+
+  function openEditorDialog(title, message, quantity, actionLabel = 'Оставить') {
+    const dialog = $('#editorDialog');
+    const input = $('#editorDialogValue');
+    $('#editorDialogTitle').textContent = title;
+    $('#editorDialogMessage').textContent = message;
+    $('#editorDialogField').hidden = !quantity;
+    input.disabled = !quantity;
+    if (quantity) {
+      $('#editorDialogLabel').textContent = quantity.label;
+      input.min = quantity.min;
+      input.max = quantity.max;
+      input.value = quantity.value;
+    }
+    $('#editorDialogApply').textContent = quantity ? 'Применить' : actionLabel;
+    dialog.returnValue = '';
+    dialog.showModal();
+    if (quantity) { input.focus(); input.select(); }
+    else dialog.querySelector('[value="cancel"]').focus();
+    return new Promise((resolve) => {
+      dialog.addEventListener('close', () => {
+        const applied = dialog.returnValue === 'apply';
+        resolve(quantity ? (applied ? input.valueAsNumber : null) : applied);
+      }, { once: true });
+    });
+  }
+
   // Подсветку и приём drop держим на уровне всего блока (шеренги/пула), а мигание при
   // наведении на дочерние строки убираем счётчиком глубины (dragenter/dragleave иначе
   // бесконечно чередуются на границах детей). dest.where === 'newPallet' — зона под
@@ -3356,7 +3740,7 @@ PZE.deserializeDoc = function (json) {
   // Enter в поле «Паллета / Шеренга» любой строки применяет места ВСЕХ строк, где номера
   // вписаны заново (не только той, где нажат Enter) — одним действием (один шаг «Отменить»).
   // Если где-то номер неверный — не переносится ничего, фокус на ошибочное поле.
-  function applyPositionsFromInputs(srcId) {
+  function applyPositionsFromInputs() {
     const doc = editorDoc;
     if (!doc) return;
     const nP = doc.pallets.length;
@@ -3366,7 +3750,7 @@ PZE.deserializeDoc = function (json) {
       if (!pos || !doc.rows[pos.id]) continue;
       const { posPallet, posLane } = pos;
       const edited = posPallet.value !== posPallet.dataset.orig || posLane.value !== posLane.dataset.orig;
-      if (!edited && pos.id !== srcId) continue;
+      if (!edited) continue;
       const art = doc.rows[pos.id].article;
       const fail = (msg, input) => { showError(`${art}: ${msg}`); input.focus(); return false; };
       const pRaw = posPallet.value.trim();
@@ -3377,7 +3761,8 @@ PZE.deserializeDoc = function (json) {
       let l = 0;
       if (p > 0) {
         l = lRaw === '' ? NaN : Math.round(parseFloat(lRaw));
-        if (!Number.isFinite(l) || l < 1 || l > 2) return fail('впишите номер шеренги (1 или 2) и нажмите Enter.', posLane);
+        const maxLane = doc.pallets[p - 1]?.lanes.length || 2;
+        if (!Number.isFinite(l) || l < 1 || l > maxLane) return fail(`впишите номер шеренги от 1 до ${maxLane} и нажмите Enter.`, posLane);
       }
       // Место не изменилось — не трогаем (иначе moveTo переставит строку в конец шеренги).
       const cur = PZE.locate(doc, pos.id);
@@ -3385,14 +3770,17 @@ PZE.deserializeDoc = function (json) {
       moves.push({ id: pos.id, p, l });
     }
     showError('');
+    pendingPositions.clear();
     if (moves.length === 0) { renderEditor(); return; }
     applyAction(() => {
       // Номер N+1 у нескольких строк — все в одну новую паллету.
       if (moves.some((m) => m.p === nP + 1)) PZE.addPallet(doc);
-      for (const m of moves) {
-        if (!doc.rows[m.id]) continue;
-        if (m.p === 0) PZE.moveTo(doc, m.id, { where: 'pool' });
-        else PZE.moveTo(doc, m.id, { where: 'lane', pi: m.p - 1, li: m.l - 1 });
+      // Сначала освободить все источники. Строка, уходящая из пула, не должна
+      // склеиться с возвращаемой в пул строкой того же артикула.
+      for (const { id } of moves) PZE.removeFromCurrent(doc, id);
+      for (const { id, p, l } of moves) {
+        if (p > 0) doc.pallets[p - 1].lanes[l - 1].push(id);
+        else if (!PZE.mergeIntoPool(doc, id)) doc.pool.push(id);
       }
     });
   }
@@ -3400,8 +3788,8 @@ PZE.deserializeDoc = function (json) {
   // Любое мутирующее действие редактора: снимок для undo → правка → авто-удаление
   // опустевших паллет → проверка свеса/перевысоты (при ухудшении — подтверждение, «Нет»
   // откатывает действие и убирает его из стека undo). Одно действие = один шаг undo.
-  function applyAction(mutator) {
-    if (!editorDoc) return false;
+  async function applyAction(mutator) {
+    if (!editorDoc || $('#editorDialog').open) return false;
     readConfigFromUI();
     pushUndo();
     const before = PZE.problemSnapshot(editorDoc, state.config);
@@ -3415,7 +3803,7 @@ PZE.deserializeDoc = function (json) {
       return true;
     }
     const msgs = PZE.newProblems(editorDoc, state.config, before);
-    if (msgs.length && !confirm(msgs.join('\n') + '\n\nОставить?')) {
+    if (msgs.length && !await openEditorDialog('Проверьте раскладку', msgs.join('\n'))) {
       const prev = undoStack.pop();
       try { editorDoc = PZE.deserializeDoc(prev); } catch (e) { /* остаёмся на текущем */ }
       previewCache = {};
@@ -3445,15 +3833,16 @@ PZE.deserializeDoc = function (json) {
   }
 
   function renderEditor() {
+    if (positionDoc !== editorDoc) {
+      positionDoc = editorDoc;
+      pendingPositions.clear();
+    }
     if (!editorDoc) return;
     readConfigFromUI();
     const doc = editorDoc;
 
-    const poolBox = $('#editorPoolBox');
-    if (!poolBox.querySelector('.chipHeaderRow')) {
-      poolBox.insertBefore(buildChipHeaderRow(), $('#poolChips'));
-    }
     const poolChips = $('#poolChips');
+    if (!poolChips.previousElementSibling) poolChips.before(buildChipHeaderRow());
     poolChips.innerHTML = '';
     // Пул сортируется по высоте столбика (по убыванию) — это главный ориентир при
     // ручной раскладке, самые высокие/приоритетные артикулы должны быть видны первыми.
@@ -3512,9 +3901,15 @@ PZE.deserializeDoc = function (json) {
       });
       headActions.appendChild(autoSortToggle);
 
+      if (!check.scene.cardboard && p.lanes.some((ids) => ids.length)) {
+        const addLayer = el('button', 'smallBtn', 'Добавить слой на прокладке');
+        addLayer.type = 'button';
+        addLayer.addEventListener('click', () => applyAction(() => { p.lanes.push([], []); }));
+        headActions.appendChild(addLayer);
+      }
       const removeBtn = el('button', 'smallBtn', 'Удалить паллету'); removeBtn.type = 'button';
-      removeBtn.addEventListener('click', () => {
-        if (confirm('Удалить паллету? Короба вернутся в пул «не распределено».')) {
+      removeBtn.addEventListener('click', async () => {
+        if (await openEditorDialog('Удалить паллету?', 'Короба вернутся в «Не распределено».', null, 'Удалить')) {
           applyAction(() => { PZE.removePallet(doc, doc.pallets.indexOf(p)); });
         }
       });
@@ -3522,8 +3917,38 @@ PZE.deserializeDoc = function (json) {
       head.appendChild(headActions);
       box.appendChild(head);
 
-      const lanes = el('div', 'editorLanes');
+      let lanes = el('div', 'editorLanes');
+      box.appendChild(lanes);
       p.lanes.forEach((laneIds, li) => {
+        if (li === 2) {
+          const { cardboard } = check.scene;
+          const bar = el('div', 'editorLayerBar');
+          bar.appendChild(el('b', null, 'Слой на картонной прокладке'));
+          const levels = [...new Set([...cardboard.levels, p.cardboardHeightCm].filter((h) => h > 0))].sort((a, b) => b - a);
+          const autoLabel = cardboard.levels.length ? `Авто · ${r1(cardboard.levels[0])} см` : 'Авто';
+          const choices = [{ value: null, label: autoLabel }, ...levels.map((value) => ({ value, label: `${r1(value)} см` }))];
+          bar.appendChild(createChoiceMenu('Высота от поддона: ', choices, p.cardboardHeightCm ?? null,
+            (value) => applyAction(() => { p.cardboardHeightCm = value ?? undefined; }), true));
+          const removeLayer = el('button', 'smallBtn', 'Убрать слой');
+          removeLayer.type = 'button';
+          removeLayer.title = 'Вернуть короба слоя в «Не распределено»';
+          removeLayer.addEventListener('click', () => applyAction(() => {
+            for (const id of p.lanes.slice(2).flat()) PZE.moveTo(doc, id, { where: 'pool' });
+            p.lanes.length = 2;
+            delete p.cardboardHeightCm;
+          }));
+          bar.appendChild(removeLayer);
+          if (cardboard.intersects || !cardboard.supports.length || check.offCardboard.length) {
+            const warning = cardboard.intersects ? 'Прокладка пересекает нижние короба' : !cardboard.supports.length
+              ? 'На выбранной высоте нет опоры' : 'Часть коробов выступает за прокладку';
+            bar.appendChild(el('strong', 'bad', warning));
+          } else if (check.unsupported.length) {
+            bar.appendChild(el('span', 'laneInfo', 'Проверьте опору при сборке'));
+          }
+          box.appendChild(bar);
+          lanes = el('div', 'editorLanes');
+          box.appendChild(lanes);
+        }
         const lane = el('div', 'editorLane');
         lane.appendChild(el('div', 'laneLabel', `Шеренга ${li + 1}`));
         const over = check.overhangLanes.includes(li);
@@ -3533,19 +3958,26 @@ PZE.deserializeDoc = function (json) {
         lane.appendChild(el('div', 'laneHint', p.autoSort
           ? 'Порядок внутри считается автоматически: от края (короче) к центру (выше).'
           : 'Ручной режим: перетащите карточку на другую, чтобы вставить до/после неё.'));
-        lane.appendChild(buildChipHeaderRow(true));
+        const table = el('div', 'chipTable');
         const row = el('div', 'chipRow');
         // В авто-режиме показываем карточки сразу в том порядке, в котором они лягут в
         // итоговой раскладке (arc-order). В ручном — как расставил пользователь.
         const displayOrder = p.autoSort
           ? PZ.arcOrderPreview(laneIds.map((id) => doc.rows[id]).filter(Boolean)).map((a) => a.id)
           : laneIds;
-        displayOrder.forEach((id) => row.appendChild(chipEl(doc, id, colorMap)));
+        displayOrder.forEach((id) => {
+          const chip = chipEl(doc, id, colorMap);
+          if (check.offCardboard.includes(id)) {
+            chip.classList.add('chipWide');
+            chip.title = 'Короб выступает за край прокладки';
+          }
+          row.appendChild(chip);
+        });
         wireDropZone(lane, { where: 'lane', pi, li });
-        lane.appendChild(row);
+        table.append(buildChipHeaderRow(true), row);
+        lane.appendChild(table);
         lanes.appendChild(lane);
       });
-      box.appendChild(lanes);
 
       const sig = palletSignature(doc, pi);
       const cached = previewCache[pi];
@@ -3566,8 +3998,7 @@ PZE.deserializeDoc = function (json) {
         setTimeout(() => {
           try {
             const pallet = palletsForRender[pi];
-            const scene = PZ.buildScene(pallet, state.config, `Паллета ${pi + 1}`, { manualOrder: !p.autoSort });
-            const canvas = PZR.composePallet(pallet, scene, state.shipment);
+            const canvas = PZR.composePallet(pallet, check.scene, state.shipment);
             const dataUrl = canvas.toDataURL('image/png');
             previewCache[pi] = { sig, dataUrl };
             img.src = dataUrl;
@@ -3582,7 +4013,15 @@ PZE.deserializeDoc = function (json) {
     });
 
     // Зона «новая паллета» под последней паллетой.
-    const newZone = el('div', 'newPalletDrop', 'Перетащите сюда — новая паллета');
+    const newZone = el('div', 'newPalletDrop');
+    const addBelow = el('button', 'ghostBtn', '+ Паллета');
+    addBelow.id = 'addPalletBelowBtn';
+    addBelow.type = 'button';
+    addBelow.title = 'Добавить пустую паллету';
+    addBelow.addEventListener('click', async () => {
+      if (await addEmptyPallet()) $('#addPalletBelowBtn')?.focus({ preventScroll: true });
+    });
+    newZone.append(addBelow, el('span', null, 'Или перетащите сюда строку с коробами'));
     wireDropZone(newZone, { where: 'newPallet' });
     palletsContainer.appendChild(newZone);
 
@@ -3607,7 +4046,10 @@ PZE.deserializeDoc = function (json) {
     onDocChanged();
   }
 
-  $('#addPalletBtn').addEventListener('click', () => { applyAction(() => PZE.addPallet(editorDoc)); });
+  function addEmptyPallet() {
+    return applyAction(() => PZE.addPallet(editorDoc));
+  }
+  $('#addPalletBtn').addEventListener('click', addEmptyPallet);
 
   // Сравнивает базовые габариты/вес строк со справочником; apply=true — обновляет их
   // (поворот каждой строки сохраняется: текущие габариты пересчитываются из новых базовых).
@@ -3638,13 +4080,13 @@ PZE.deserializeDoc = function (json) {
       const diffRows = syncDocWithLookup(editorDoc, lookup, false);
       let updateDims = false;
       if (diffRows > 0) {
-        updateDims = confirm(`У ${diffRows} строк габариты отличаются от справочника. Обновить из справочника?`);
+        updateDims = await openEditorDialog('Обновить габариты?', `У ${diffRows} строк габариты отличаются от справочника.`, null, 'Обновить');
       }
       if (newRows.length === 0 && !updateDims) {
         showInfo(diffRows > 0 ? 'Справочник обновлён, габариты оставлены как есть.' : 'Справочник обновлён, изменений нет.');
         return;
       }
-      if (!applyAction(() => {
+      if (!await applyAction(() => {
         for (const r of newRows) { editorDoc.rows[r.id] = r; editorDoc.pool.push(r.id); }
         if (updateDims) syncDocWithLookup(editorDoc, lookup, true);
       })) { showInfo('Обновление отменено.'); return; }
@@ -3672,12 +4114,12 @@ PZE.deserializeDoc = function (json) {
     }
   });
 
-  $('#autoLayoutBtn').addEventListener('click', () => {
+  $('#autoLayoutBtn').addEventListener('click', async () => {
     if (!editorDoc) return;
     if (editorDoc.pool.length === 0) { showInfo('В «Не распределено» ничего нет — раскладывать нечего. Чтобы разложить заново, нажмите «Сбросить».'); return; }
     readConfigFromUI();
     let res = null;
-    if (!applyAction(() => { res = PZE.autoLayout(editorDoc, state.config, state.config.splitThresholdCm); })) return;
+    if (!await applyAction(() => { res = PZE.autoLayout(editorDoc, state.config, state.config.splitThresholdCm); })) return;
     const parts = [`разложено строк: ${res.placed}`];
     if (res.splitCount) parts.push(`разделено высоких столбиков: ${res.splitCount}`);
     if (res.newPallets) parts.push(`добавлено паллет: ${res.newPallets}`);
@@ -3712,13 +4154,13 @@ PZE.deserializeDoc = function (json) {
     URL.revokeObjectURL(url);
   });
 
-  $('#clearDraftBtn').addEventListener('click', () => {
+  $('#clearDraftBtn').addEventListener('click', async () => {
     if (!editorDoc) return;
     if (!state.initialDocPayload) {
       showError('Не удалось сбросить: исходное состояние этого файла не сохранено (черновик из старой версии приложения). Загрузите файл заново.');
       return;
     }
-    if (!confirm('Отменить все изменения и вернуться к состоянию сразу после загрузки этого файла? Файл останется в истории.')) return;
+    if (!await openEditorDialog('Сбросить раскладку?', 'Вернётся состояние сразу после загрузки. Файл останется в истории.', null, 'Сбросить')) return;
     pushUndo();
     try {
       editorDoc = PZE.deserializeDoc(state.initialDocPayload);
@@ -3732,12 +4174,12 @@ PZE.deserializeDoc = function (json) {
     showError('');
   });
 
-  $('#finishEditingBtn').addEventListener('click', () => {
+  $('#finishEditingBtn').addEventListener('click', async () => {
     if (!editorDoc) return;
     readConfigFromUI();
     if (editorDoc.pool.length > 0) {
       const boxes = editorDoc.pool.reduce((s, id) => s + (editorDoc.rows[id] ? editorDoc.rows[id].qty : 0), 0);
-      if (!confirm(`В «Не распределено» осталось ${editorDoc.pool.length} строк (${boxes} коробов). Построить карточки без них?`)) return;
+      if (!await openEditorDialog('Построить карточки', `В «Не распределено» осталось ${editorDoc.pool.length} строк (${boxes} коробов). Построить карточки без них?`)) return;
     }
     buildCardsFromEditor();
   });
@@ -3784,10 +4226,18 @@ PZE.deserializeDoc = function (json) {
         if (!r.article || nums.some((v) => !(typeof v === 'number' && v > 0))) {
           throw new Error(`${what}: у строки «${r.article || id}» нет артикула, количества или габаритов.`);
         }
+        if (r.secondRowQty != null && !(Number.isInteger(r.secondRowQty) && r.secondRowQty >= 0)) {
+          throw new Error(`${what}: у строки «${r.article || id}» неверное количество во втором ряду.`);
+        }
       }
       const used = [...(raw.pool || [])];
       for (const p of raw.pallets || []) {
-        if (!p || !Array.isArray(p.lanes) || p.lanes.length !== 2) throw new Error(`${what}: у паллеты должно быть две шеренги.`);
+        if (!p || !Array.isArray(p.lanes) || ![2, 4].includes(p.lanes.length) || !p.lanes.every(Array.isArray)) {
+          throw new Error(`${what}: на каждом слое паллеты должно быть две шеренги.`);
+        }
+        if (p.cardboardHeightCm != null && !(Number.isFinite(p.cardboardHeightCm) && p.cardboardHeightCm > 0)) {
+          throw new Error(`${what}: неверный уровень прокладки.`);
+        }
         p.lanes.forEach((l) => used.push(...l));
       }
       const seen = new Set();
@@ -3864,15 +4314,18 @@ PZE.deserializeDoc = function (json) {
       }
       const weight = ln.weightPerBoxKg != null ? ln.weightPerBoxKg : (d ? d.weightPerBoxKg : 0);
       return { ln, row: PZ.makeArticle({ article: ln.article, qty: ln.qty, lengthCm: cur[0], widthCm: cur[1], heightCm: cur[2],
-        weightPerBoxKg: weight, baseL: base[0], baseW: base[1], baseH: base[2], perm }) };
+        weightPerBoxKg: weight, baseL: base[0], baseW: base[1], baseH: base[2], perm, secondRowQty: ln.secondRowQty }) };
     });
     const doc = { rows: {}, pool: [], pallets: [] };
     const nPal = Math.max(0, ...made.map((m) => m.ln.pallet || 0));
     for (let i = 0; i < nPal; i++) doc.pallets.push(PZE.newPallet(false));
     for (const { ln, row } of made) {
       doc.rows[row.id] = row;
-      if (ln.pallet) doc.pallets[ln.pallet - 1].lanes[ln.lane - 1].push(row.id);
-      else doc.pool.push(row.id);
+      if (!ln.pallet) { doc.pool.push(row.id); continue; }
+      const p = doc.pallets[ln.pallet - 1];
+      if ((ln.layer === 2 || ln.cardboard !== undefined) && p.lanes.length === 2) p.lanes.push([], []);
+      if (ln.cardboard !== undefined) p.cardboardHeightCm = ln.cardboard;
+      p.lanes[(ln.layer - 1) * 2 + ln.lane - 1].push(row.id);
     }
     if (doc.pallets.length === 0) doc.pallets.push(PZE.newPallet(true));
     let manual = 0;
@@ -3956,6 +4409,11 @@ PZE.deserializeDoc = function (json) {
   }
 
   dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('keydown', (e) => {
+    if (e.target !== dropzone || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    fileInput.click();
+  });
   dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
   dropzone.addEventListener('drop', (e) => {
@@ -4089,6 +4547,7 @@ PZE.deserializeDoc = function (json) {
   $('#undoBtn').addEventListener('click', () => undoLastAction());
 
   document.addEventListener('keydown', (e) => {
+    if ($('#editorDialog').open) return;
     if (e.key === 'Escape') {
       if (!helpModal.hidden) helpModal.hidden = true;
       if (!historyModal.hidden) historyModal.hidden = true;
